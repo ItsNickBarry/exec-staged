@@ -1,0 +1,34 @@
+{
+  "name": "exec-staged",
+  "version": "0.0.0",
+  "description": "Run commands against the current git index",
+  "keywords": [
+    "git",
+    "lint",
+    "staged",
+    "lint-staged",
+    "pre-commit",
+    "commit",
+    "hook"
+  ],
+  "license": "UNLICENSED",
+  "author": "Nick Barry",
+  "scripts": {
+    "build": "pnpm clean && tsc --build",
+    "clean": "rm -rf dist/",
+    "prepare": "husky",
+    "prepublishOnly": "pnpm build",
+    "prettier": "prettier --write ."
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@tsconfig/node22": "^22.0.2",
+    "@types/node": "^22.15.30",
+    "husky": "^9.1.7",
+    "knip": "^5.60.2",
+    "lint-staged": "github:ItsNickBarry/lint-staged#knip",
+    "prettier": "^3.5.3",
+    "prettier-plugin-packagejson": "^2.5.15",
+    "typescript": "^5.8.3"
+  }
+}
