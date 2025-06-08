@@ -14,12 +14,18 @@
   "license": "UNLICENSED",
   "author": "Nick Barry",
   "type": "module",
+  "bin": {
+    "exec-staged": "dist/bin/exec_staged.js"
+  },
   "scripts": {
     "build": "pnpm clean && tsc --build",
     "clean": "rm -rf dist/",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
     "prettier": "prettier --write ."
+  },
+  "dependencies": {
+    "simple-git": "^3.28.0"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
