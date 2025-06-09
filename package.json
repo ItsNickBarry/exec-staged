@@ -14,8 +14,11 @@
   "license": "UNLICENSED",
   "author": "Nick Barry",
   "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "bin": {
-    "exec-staged": "dist/bin/cli.js"
+    "exec-staged": "./dist/bin/cli.js"
   },
   "scripts": {
     "build": "pnpm clean && tsc --build",
