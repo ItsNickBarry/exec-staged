@@ -2,10 +2,10 @@ import pkg from '../package.json' with { type: 'json' };
 import child_process from 'node:child_process';
 import { simpleGit } from 'simple-git';
 
-export default async (cwd: string) => {
-  const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
+const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
 
-  const git = simpleGit();
+export default async (cwd: string) => {
+  const git = simpleGit(cwd);
 
   const dropBackupStash = async () => {
     try {
@@ -75,6 +75,7 @@ export default async (cwd: string) => {
 
     for (const task of tasks) {
       const result = child_process.spawnSync('pnpm', task.split(' '), {
+        cwd,
         stdio: 'inherit',
       });
 
