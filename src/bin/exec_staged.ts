@@ -10,15 +10,18 @@ const git = simpleGit();
 const version = await git.version();
 
 if (version.major < 2 || (version.major === 2 && version.minor < 14)) {
-  throw new Error('unsupported git version');
+  console.log('⚠️ Unsupported git version!');
+  process.exit(1);
 }
 
 const list = await git.stash(['list']);
 
 if (list.includes(STASH_MESSAGE)) {
-  throw new Error(
-    'backup stash found in stash list must be removed before running',
+  console.log(`⚠️ Found unexpected ${pkg.name} backup stash!`);
+  console.log(
+    'It must be left over from a previous failed run.  Remove it before proceeding.',
   );
+  process.exit(1);
 }
 
 console.log('➡️ Creating backup stash and hiding unstaged changes...');
