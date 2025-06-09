@@ -35,13 +35,25 @@ await git.stash([
 
 // TODO: restore merge status
 
+const tasks = ['prettier --write .', 'knip'];
+
 console.log('➡️ Running tasks...');
-child_process.spawnSync('pnpm', ['prettier', '--write', '.'], {
-  stdio: 'inherit',
-});
-child_process.spawnSync('pnpm', ['knip'], {
-  stdio: 'inherit',
-});
+
+for (const task of tasks) {
+  const result = child_process.spawnSync('pnpm', task.split(' '), {
+    stdio: 'inherit',
+  });
+
+  if (result.status !== 0) {
+    console.log(`⚠️ Error running task: \`${task}\`!`);
+    console.log('➡️ Restoring state from backup stash...');
+    await git.reset(['--hard', 'HEAD']);
+    await git.stash(['apply', '--index', 'stash@{0}']);
+    console.log('➡️ Dropping backup stash...');
+    await git.stash(['drop', 'stash@{0}']);
+    process.exit(1);
+  }
+}
 
 console.log('➡️ Adding changes made by tasks...');
 await git.add(['-A']);
@@ -54,6 +66,9 @@ try {
   console.log('➡️ Restoring state from backup stash...');
   await git.reset(['--hard', 'HEAD']);
   await git.stash(['apply', '--index', 'stash@{0}']);
+  console.log('➡️ Dropping backup stash...');
+  await git.stash(['drop', 'stash@{0}']);
+  process.exit(1);
 }
 
 console.log('➡️ Dropping backup stash...');
