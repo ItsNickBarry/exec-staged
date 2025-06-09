@@ -6,6 +6,7 @@ const cwd = process.cwd();
 
 const config: { [key: string]: string[] } = await loadConfig();
 
-const tasks = Object.values(config).flat();
+// const tasks = Object.values(config).flat();
+const tasks = ['prettier --write .', 'knip'];
 
 await execStaged(cwd, tasks);

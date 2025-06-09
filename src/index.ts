@@ -1,5 +1,5 @@
 import pkg from '../package.json' with { type: 'json' };
-import child_process from 'node:child_process';
+import spawn from 'nano-spawn';
 import { simpleGit } from 'simple-git';
 
 const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
@@ -72,12 +72,16 @@ export default async (cwd: string, tasks: string[]) => {
     console.log('➡️ Running tasks...');
 
     for (const task of tasks) {
-      const result = child_process.spawnSync('pnpm', task.split(' '), {
-        cwd,
-        stdio: 'inherit',
-      });
+      try {
+        console.log(`➡️ Running task: ${task}`);
 
-      if (result.status !== 0) {
+        const [command, ...args] = task.split(' ');
+
+        await spawn(command, args, {
+          preferLocal: true,
+          stdio: 'inherit',
+        });
+      } catch (error) {
         console.log(`⚠️ Error running task: \`${task}\`!`);
         await restoreBackupStash();
         process.exit(1);
