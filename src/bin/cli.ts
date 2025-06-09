@@ -4,7 +4,8 @@ import { loadConfig } from '../lib/config.js';
 
 const cwd = process.cwd();
 
-// TODO: pass config in
-const config = await loadConfig();
+const config: { [key: string]: string[] } = await loadConfig();
 
-await execStaged(cwd);
+const tasks = Object.values(config).flat();
+
+await execStaged(cwd, tasks);

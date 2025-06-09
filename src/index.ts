@@ -4,7 +4,7 @@ import { simpleGit } from 'simple-git';
 
 const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
 
-export default async (cwd: string) => {
+export default async (cwd: string, tasks: string[]) => {
   const git = simpleGit(cwd);
 
   const dropBackupStash = async () => {
@@ -67,8 +67,6 @@ export default async (cwd: string) => {
   }
 
   // TODO: restore merge status
-
-  const tasks = ['prettier --write .', 'knip'];
 
   try {
     console.log('➡️ Running tasks...');
