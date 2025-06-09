@@ -21,7 +21,8 @@
     "build": "pnpm clean && tsc --build",
     "clean": "rm -rf dist/",
     "prepare": "husky",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "pnpm build && tsx --test --experimental-test-coverage"
   },
   "dependencies": {
     "simple-git": "^3.28.0"
@@ -35,6 +36,7 @@
     "lint-staged": "github:ItsNickBarry/lint-staged#knip",
     "prettier": "^3.5.3",
     "prettier-plugin-packagejson": "^2.5.15",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }
