@@ -21,8 +21,7 @@
     "build": "pnpm clean && tsc --build",
     "clean": "rm -rf dist/",
     "prepare": "husky",
-    "prepublishOnly": "pnpm build",
-    "prettier": "prettier --write ."
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "simple-git": "^3.28.0"
