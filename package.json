@@ -15,7 +15,7 @@
   "author": "Nick Barry",
   "type": "module",
   "bin": {
-    "exec-staged": "dist/bin/exec_staged.js"
+    "exec-staged": "dist/bin/cli.js"
   },
   "scripts": {
     "build": "pnpm clean && tsc --build",
