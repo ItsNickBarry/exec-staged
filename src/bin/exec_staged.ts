@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import pkg from '../../package.json' with { type: 'json' };
+import child_process from 'node:child_process';
 import { simpleGit } from 'simple-git';
 
 const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
@@ -31,12 +32,26 @@ await git.stash([
 
 // TODO: restore merge status
 
-// TODO: run tasks
+console.log('➡️ Running tasks...');
+child_process.spawnSync('pnpm', ['prettier', '--write', '.'], {
+  stdio: 'inherit',
+});
+child_process.spawnSync('pnpm', ['knip'], {
+  stdio: 'inherit',
+});
 
-console.log('➡️ Restoring unstaged changes...');
-git.stash(['apply', 'stash@{0}']);
+console.log('➡️ Adding changes made by tasks...');
+await git.add(['-A']);
 
-// TODO: restore stash if errors
+try {
+  console.log('➡️ Restoring unstaged changes...');
+  await git.stash(['apply', '--index', 'stash@{0}']);
+} catch (error) {
+  console.log('⚠️ Error restoring unstaged changes!');
+  console.log('➡️ Restoring state from backup stash...');
+  await git.reset(['--hard', 'HEAD']);
+  await git.stash(['apply', '--index', 'stash@{0}']);
+}
 
-console.log('➡️ Dropping stash...');
-await git.stash(['drop', `stash@{0}`]);
+console.log('➡️ Dropping backup stash...');
+await git.stash(['drop', 'stash@{0}']);
