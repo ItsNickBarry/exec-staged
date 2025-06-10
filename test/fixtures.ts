@@ -5,7 +5,7 @@ import path from 'node:path';
 import { simpleGit } from 'simple-git';
 
 export const setup = async () => {
-  const cwd = path.resolve(envPaths(pkg.name).temp, 'test');
+  const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
   await fs.promises.rm(cwd, { recursive: true, force: true });
   await fs.promises.mkdir(cwd, { recursive: true });
 
