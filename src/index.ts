@@ -62,8 +62,18 @@ export default async (cwd: string, tasks: string[]) => {
       STASH_MESSAGE,
     ]);
   } catch (error) {
-    console.log('⚠️ Error creating backup stash!');
-    process.exit(1);
+    if (
+      String(error).includes(
+        "error: pathspec ':/' did not match any file(s) known to git",
+      )
+    ) {
+      // this error is thrown if no files are committed or staged
+      // however, the stash is successfully created and the working directory cleared
+      // this situation is unlikely in production, but occurs in the tests
+    } else {
+      console.log('⚠️ Error creating backup stash!');
+      process.exit(1);
+    }
   }
 
   // TODO: restore merge status
