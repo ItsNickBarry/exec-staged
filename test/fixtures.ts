@@ -6,7 +6,7 @@ import { simpleGit } from 'simple-git';
 
 export const setup = async () => {
   const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
-  await fs.promises.rm(cwd, { recursive: true, force: true });
+  // TODO: cleanup
   await fs.promises.mkdir(cwd, { recursive: true });
 
   const git = simpleGit(cwd);
