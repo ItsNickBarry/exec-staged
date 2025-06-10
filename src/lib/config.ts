@@ -2,8 +2,8 @@ import pkg from '../../package.json' with { type: 'json' };
 import type { ExecStagedConfig, Tasks } from '../types.js';
 import { lilconfig } from 'lilconfig';
 
-export const loadConfig = async (): Promise<ExecStagedConfig> => {
-  const configResult = await lilconfig(pkg.name).search();
+export const loadConfig = async (cwd: string): Promise<ExecStagedConfig> => {
+  const configResult = await lilconfig(pkg.name).search(cwd);
 
   if (configResult) {
     const { config, filepath } = configResult;

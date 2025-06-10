@@ -4,7 +4,7 @@ import { loadConfig, parseTasks } from '../lib/config.js';
 
 const cwd = process.cwd();
 
-const config = await loadConfig();
+const config = await loadConfig(cwd);
 
 const configTasks = await parseTasks(Object.values(config));
 
