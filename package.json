@@ -37,6 +37,7 @@
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^22.15.30",
+    "env-paths": "^3.0.0",
     "husky": "^9.1.7",
     "knip": "^5.60.2",
     "lint-staged": "github:ItsNickBarry/lint-staged#knip",
