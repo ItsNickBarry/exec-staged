@@ -17,6 +17,7 @@
   "exports": {
     ".": "./dist/index.js"
   },
+  "types": "./dist/index.d.ts",
   "bin": {
     "exec-staged": "./dist/bin/cli.js"
   },
