@@ -19,7 +19,27 @@ export class TestStage extends Stage {
   public static async create() {
     const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
 
-    // TODO: cleanup
+    process.setMaxListeners(process.getMaxListeners() + 1);
+
+    [
+      'beforeExit',
+      'uncaughtException',
+      'unhandledRejection',
+      'SIGHUP',
+      'SIGINT',
+      'SIGQUIT',
+      'SIGILL',
+      'SIGTRAP',
+      'SIGABRT',
+      'SIGBUS',
+      'SIGFPE',
+      'SIGUSR1',
+      'SIGSEGV',
+      'SIGUSR2',
+      'SIGTERM',
+    ].forEach((event) =>
+      process.on(event, () => fs.rmSync(cwd, { recursive: true, force: true })),
+    );
     await fs.promises.mkdir(cwd, { recursive: true });
 
     const git = simpleGit(cwd);
