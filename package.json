@@ -11,6 +11,7 @@
     "commit",
     "hook"
   ],
+  "repository": "github:ItsNickBarry/exec-staged",
   "license": "UNLICENSED",
   "author": "Nick Barry",
   "type": "module",
@@ -21,6 +22,10 @@
   "bin": {
     "exec-staged": "./dist/bin/cli.js"
   },
+  "files": [
+    "dist/",
+    "src/"
+  ],
   "scripts": {
     "build": "pnpm clean && tsc --build",
     "clean": "rm -rf dist/",
