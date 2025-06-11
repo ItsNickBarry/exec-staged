@@ -50,6 +50,11 @@ export class Stage {
       throw error;
     }
 
+    if (!(await this.git.checkIsRepo())) {
+      console.log('⚠️ Not a git repository!');
+      throw new Error('TODO: error');
+    }
+
     const list = await this.git.stash(['list']);
 
     if (list.includes(STASH_MESSAGE)) {
