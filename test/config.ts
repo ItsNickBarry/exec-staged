@@ -1,5 +1,5 @@
 import { loadConfig, parseTasks } from '../src/lib/config.js';
-import { setup } from './fixtures.js';
+import { TestStage } from './test_stage.js';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 
 describe('loadConfig', () => {
   it('returns config from exec-staged.config.js', async () => {
-    const { cwd } = await setup();
+    const { cwd } = await TestStage.create();
     await fs.promises.writeFile(
       path.resolve(cwd, 'exec-staged.config.js'),
       `export default { '*': "echo 'task'" };`,
@@ -16,7 +16,7 @@ describe('loadConfig', () => {
   });
 
   it('returns empty config if no config is found', async () => {
-    const { cwd } = await setup();
+    const { cwd } = await TestStage.create();
     assert.deepEqual(await loadConfig(cwd), {});
   });
 });

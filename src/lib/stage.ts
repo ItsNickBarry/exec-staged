@@ -7,8 +7,8 @@ const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
 
 export class Stage {
   public readonly cwd: string;
-  private readonly git: SimpleGit;
-  private stashed: boolean = false;
+  protected readonly git: SimpleGit;
+  protected stashed: boolean = false;
 
   constructor(cwd: string) {
     this.cwd = cwd;
