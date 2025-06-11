@@ -9,5 +9,4 @@ const configTasks = await parseTasks(Object.values(config));
 
 const tasks = process.argv.length > 2 ? process.argv.slice(2) : configTasks;
 
-const status = await execStaged(cwd, tasks);
-process.exit(status);
+process.exitCode = await execStaged(cwd, tasks);
