@@ -11,4 +11,6 @@ const configTasks = await parseTasks(Object.values(config));
 // const tasks = Object.values(config).flat();
 const tasks = [process.argv[2] ?? ['prettier --write .', 'knip']].flat();
 
-await execStaged(cwd, tasks);
+const status = await execStaged(cwd, tasks);
+
+process.exit(status);
