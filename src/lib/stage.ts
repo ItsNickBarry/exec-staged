@@ -1,9 +1,7 @@
-import pkg from '../../package.json' with { type: 'json' };
+import { BACKUP_STASH_MESSAGE } from './constants.js';
 import spawn from 'nano-spawn';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
-
-const STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
 
 export class Stage {
   public readonly cwd: string;
@@ -57,7 +55,7 @@ export class Stage {
 
     const list = await this.git.stash(['list']);
 
-    if (list.includes(STASH_MESSAGE)) {
+    if (list.includes(BACKUP_STASH_MESSAGE)) {
       console.log('⚠️ Found unexpected backup stash!');
       console.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
@@ -80,7 +78,7 @@ export class Stage {
         '--keep-index',
         '--include-untracked',
         '--message',
-        STASH_MESSAGE,
+        BACKUP_STASH_MESSAGE,
       ]);
 
       this.stashed = true;
