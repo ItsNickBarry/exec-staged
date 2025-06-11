@@ -16,6 +16,12 @@ export class TestStage extends Stage {
     await fs.promises.writeFile(absolutePath, contents);
   }
 
+  public async rm(relativePath: string) {
+    assert(!path.isAbsolute(relativePath));
+    const absolutePath = path.resolve(this.cwd, relativePath);
+    await fs.promises.rm(absolutePath, { recursive: true, force: true });
+  }
+
   public static async create() {
     const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
 
