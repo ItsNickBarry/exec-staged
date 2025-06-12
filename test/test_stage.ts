@@ -1,4 +1,5 @@
 import pkg from '../package.json';
+import { spawnSync } from '../src/lib/spawn';
 import { Stage } from '../src/lib/stage';
 import envPaths from 'env-paths';
 import assert from 'node:assert';
@@ -20,6 +21,10 @@ export class TestStage extends Stage {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
     await fs.promises.rm(absolutePath, { recursive: true, force: true });
+  }
+
+  public spawnSync(task: string): string {
+    return spawnSync(this.cwd, task);
   }
 
   public static async create() {
