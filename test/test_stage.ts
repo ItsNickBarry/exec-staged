@@ -1,5 +1,4 @@
 import pkg from '../package.json';
-import { Git } from '../src/lib/git';
 import { Stage } from '../src/lib/stage';
 import envPaths from 'env-paths';
 import assert from 'node:assert';
@@ -8,7 +7,7 @@ import path from 'node:path';
 import { registerExitHandler } from 'on-process-exit';
 
 export class TestStage extends Stage {
-  declare public readonly git: Git;
+  declare public git: (args: string[]) => string;
 
   public async writeFile(relativePath: string, contents: string = '') {
     assert(!path.isAbsolute(relativePath));
@@ -36,11 +35,12 @@ export class TestStage extends Stage {
       JSON.stringify({ type: 'module' }),
     );
 
-    const git = new Git(cwd);
-    git.exec(['init']);
-    git.exec(['add', 'package.json']);
-    git.exec(['commit', '-m', 'initial commit']);
+    const stage = new TestStage(cwd);
 
-    return new TestStage(cwd);
+    stage.git(['init']);
+    stage.git(['add', 'package.json']);
+    stage.git(['commit', '-m', 'initial commit']);
+
+    return stage;
   }
 }

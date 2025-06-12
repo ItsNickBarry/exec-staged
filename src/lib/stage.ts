@@ -6,12 +6,10 @@ import { parseArgsStringToArgv } from 'string-argv';
 
 export class Stage {
   public readonly cwd: string;
-  protected readonly git: Git;
   protected stashed: boolean = false;
 
   constructor(cwd: string) {
     this.cwd = cwd;
-    this.git = new Git(cwd);
   }
 
   public async exec(tasks: string[]) {
@@ -38,9 +36,9 @@ export class Stage {
 
   private check() {
     try {
-      const version = this.git
-        .exec(['--version'])
-        .match(/git version (\d+\.\d+\.\d+)/)?.[1];
+      const version = this.git(['--version']).match(
+        /git version (\d+\.\d+\.\d+)/,
+      )?.[1];
 
       if (!version || semver.lte(version, '2.13.0')) {
         console.log('⚠️ Unsupported git version!');
@@ -52,13 +50,13 @@ export class Stage {
     }
 
     try {
-      this.git.exec(['rev-parse', '--is-inside-work-tree']);
+      this.git(['rev-parse', '--is-inside-work-tree']);
     } catch (error) {
       console.log('⚠️ Not a git repository!');
       throw new Error('TODO: error');
     }
 
-    const list = this.git.exec(['stash', 'list']);
+    const list = this.git(['stash', 'list']);
 
     if (list.includes(BACKUP_STASH_MESSAGE)) {
       console.log('⚠️ Found unexpected backup stash!');
@@ -70,7 +68,7 @@ export class Stage {
   }
 
   private prepare() {
-    const status = this.git.exec(['status', '-z']);
+    const status = this.git(['status', '-z']);
 
     // if there are no files in index or working directory, do not attempt to stash
     if (status.length === 0) return;
@@ -79,7 +77,7 @@ export class Stage {
       console.log('➡️ Creating backup stash and hiding unstaged changes...');
       // TODO: keep unstaged deletions in index
 
-      this.git.exec([
+      this.git([
         'stash',
         'push',
         '--keep-index',
@@ -127,7 +125,7 @@ export class Stage {
   private merge() {
     try {
       console.log('➡️ Adding changes made by tasks...');
-      this.git.exec(['add', '-A']);
+      this.git(['add', '-A']);
     } catch (error) {
       console.log('⚠️ Error adding new changes!');
       throw error;
@@ -137,7 +135,7 @@ export class Stage {
 
     try {
       console.log('➡️ Restoring unstaged changes...');
-      this.git.exec(['stash', 'apply', '--index', 'stash@{0}']);
+      this.git(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Error restoring unstaged changes!');
       throw error;
@@ -149,8 +147,8 @@ export class Stage {
 
     try {
       console.log('➡️ Restoring state from backup stash...');
-      this.git.exec(['reset', '--hard', 'HEAD']);
-      this.git.exec(['stash', 'apply', '--index', 'stash@{0}']);
+      this.git(['reset', '--hard', 'HEAD']);
+      this.git(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Failed to restore state from backup stash!');
       throw error;
@@ -162,10 +160,14 @@ export class Stage {
 
     try {
       console.log('➡️ Dropping backup stash...');
-      this.git.exec(['stash', 'drop', 'stash@{0}']);
+      this.git(['stash', 'drop', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Failed to drop backup stash!');
       throw error;
     }
+  }
+
+  protected git(args: string[]) {
+    return new Git(this.cwd).exec(args);
   }
 }
