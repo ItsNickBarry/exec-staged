@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import execStaged from '../index.js';
 import { loadConfig, parseTasks } from '../lib/config.js';
+import { execStaged } from '../lib/exec_staged.js';
 
 const cwd = process.cwd();
 const config = await loadConfig(cwd);
