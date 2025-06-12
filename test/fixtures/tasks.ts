@@ -5,6 +5,7 @@ import { describe, it, beforeEach } from 'node:test';
 export const TASK_ASSERT_NO_CHANGES = `bash -c '[ -z "$(git status -z)" ] && exit 0 || exit 1'`;
 export const TASK_EXIT_0 = 'bash -c "exit 0"';
 export const TASK_EXIT_1 = 'bash -c "exit 1"';
+export const TASK_SLEEP = 'sleep 1';
 
 // skip tests if this file is loaded as an import
 if (process.argv[1] === import.meta.filename) {
@@ -70,10 +71,18 @@ if (process.argv[1] === import.meta.filename) {
     });
 
     describe('TASK_EXIT_1', () => {
-      it('returns exit code 1', async () => {
-        it('throws', async () => {
-          assert.throws(() => stage.spawnSync(TASK_EXIT_1));
-        });
+      it('throws', async () => {
+        assert.throws(() => stage.spawnSync(TASK_EXIT_1));
+      });
+    });
+
+    describe('TASK_SLEEP', () => {
+      it('sleeps for one second', async () => {
+        const startedAt = new Date().getTime();
+        stage.spawnSync(TASK_SLEEP);
+        const endedAt = new Date().getTime();
+
+        assert(endedAt - startedAt >= 1000);
       });
     });
   });
