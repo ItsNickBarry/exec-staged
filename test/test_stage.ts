@@ -4,33 +4,8 @@ import envPaths from 'env-paths';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { registerExitHandler } from 'on-process-exit';
 import simpleGit, { SimpleGit } from 'simple-git';
-
-const testDirectories: string[] = [];
-
-[
-  'beforeExit',
-  'uncaughtException',
-  'unhandledRejection',
-  'SIGHUP',
-  'SIGINT',
-  'SIGQUIT',
-  'SIGILL',
-  'SIGTRAP',
-  'SIGABRT',
-  'SIGBUS',
-  'SIGFPE',
-  'SIGUSR1',
-  'SIGSEGV',
-  'SIGUSR2',
-  'SIGTERM',
-].forEach((event) =>
-  process.on(event, () =>
-    testDirectories.forEach((dir) =>
-      fs.rmSync(dir, { recursive: true, force: true }),
-    ),
-  ),
-);
 
 export class TestStage extends Stage {
   declare public readonly git: SimpleGit;
@@ -50,7 +25,11 @@ export class TestStage extends Stage {
 
   public static async create() {
     const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
-    testDirectories.push(cwd);
+
+    registerExitHandler(() => {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    });
+
     await fs.promises.mkdir(cwd, { recursive: true });
 
     const git = simpleGit(cwd);
