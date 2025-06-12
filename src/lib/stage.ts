@@ -86,18 +86,8 @@ export class Stage {
 
       this.stashed = true;
     } catch (error) {
-      if (
-        String(error).includes(
-          "error: pathspec ':/' did not match any file(s) known to git",
-        )
-      ) {
-        // this error is thrown if no files are committed or staged
-        // however, the stash is successfully created and the working tree cleared
-        // this situation is unlikely in production, but occurs in the tests
-      } else {
-        console.log('⚠️ Error creating backup stash!');
-        throw error;
-      }
+      console.log('⚠️ Error creating backup stash!');
+      throw error;
     }
 
     // TODO: restore merge status
