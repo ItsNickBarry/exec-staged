@@ -15,6 +15,15 @@ describe('loadConfig', () => {
     assert.deepEqual(await loadConfig(cwd), { '*': "echo 'task'" });
   });
 
+  it('returns config from .exec-stagedrc.json', async () => {
+    const { cwd } = await TestStage.create();
+    await fs.promises.writeFile(
+      path.resolve(cwd, '.exec-stagedrc.json'),
+      JSON.stringify({ '*': "echo 'task'" }),
+    );
+    assert.deepEqual(await loadConfig(cwd), { '*': "echo 'task'" });
+  });
+
   it('returns empty config if no config is found', async () => {
     const { cwd } = await TestStage.create();
     assert.deepEqual(await loadConfig(cwd), {});
