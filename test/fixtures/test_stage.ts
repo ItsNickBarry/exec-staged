@@ -10,6 +10,12 @@ import path from 'node:path';
 import { registerExitHandler } from 'on-process-exit';
 
 export class TestStage extends Stage {
+  declare public check: () => void;
+  declare public prepare: () => void;
+  declare public exec: () => Promise<void>;
+  declare public merge: () => void;
+  declare public revert: () => void;
+  declare public clean: () => void;
   declare public git: (args: string[]) => string;
 
   public async writeFile(relativePath: string, contents: string = '') {

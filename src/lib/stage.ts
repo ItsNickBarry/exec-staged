@@ -32,7 +32,7 @@ export class Stage {
     }
   }
 
-  private check() {
+  protected check() {
     try {
       const version = this.git(['--version']).match(
         /git version (\d+\.\d+\.\d+)/,
@@ -65,7 +65,7 @@ export class Stage {
     }
   }
 
-  private prepare() {
+  protected prepare() {
     const status = this.git(['status', '-z']);
 
     // if there are no files in index or working tree, do not attempt to stash
@@ -103,7 +103,7 @@ export class Stage {
     // TODO: restore merge status
   }
 
-  private async run(task: string) {
+  protected async run(task: string) {
     try {
       console.log(`➡️ Running task: ${task}`);
       await spawn(this.cwd, task);
@@ -113,7 +113,7 @@ export class Stage {
     }
   }
 
-  private merge() {
+  protected merge() {
     try {
       console.log('➡️ Adding changes made by tasks...');
       this.git(['add', '-A']);
@@ -133,7 +133,7 @@ export class Stage {
     }
   }
 
-  private revert() {
+  protected revert() {
     if (!this.stashed) return;
 
     try {
@@ -146,7 +146,7 @@ export class Stage {
     }
   }
 
-  private clean() {
+  protected clean() {
     if (!this.stashed) return;
 
     try {
