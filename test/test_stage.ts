@@ -31,10 +31,15 @@ export class TestStage extends Stage {
     });
 
     await fs.promises.mkdir(cwd, { recursive: true });
+    await fs.promises.writeFile(
+      path.resolve(cwd, 'package.json'),
+      JSON.stringify({ type: 'module' }),
+    );
 
     const git = simpleGit(cwd);
     await git.init();
-    await git.commit('initial commit', ['--allow-empty']);
+    await git.add(['package.json']);
+    await git.commit('initial commit');
 
     return new TestStage(cwd);
   }
