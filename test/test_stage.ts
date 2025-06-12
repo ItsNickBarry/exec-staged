@@ -1,6 +1,8 @@
 import pkg from '../package.json';
+import execStaged from '../src/index.js';
 import { spawnSync } from '../src/lib/spawn';
 import { Stage } from '../src/lib/stage';
+import type { ExitCode } from '../src/types.js';
 import envPaths from 'env-paths';
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -21,6 +23,10 @@ export class TestStage extends Stage {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
     await fs.promises.rm(absolutePath, { recursive: true, force: true });
+  }
+
+  public async execStaged(tasks: string[]): Promise<ExitCode> {
+    return await execStaged(this.cwd, tasks);
   }
 
   public spawnSync(task: string): string {
