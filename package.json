@@ -41,15 +41,15 @@
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@tsconfig/node22": "^22.0.2",
-    "@types/node": "^22.15.30",
+    "@types/node": "^22.15.31",
     "env-paths": "^3.0.0",
     "husky": "^9.1.7",
     "knip": "^5.60.2",
     "lint-staged": "github:ItsNickBarry/lint-staged#knip",
-    "on-process-exit": "^1.0.1",
+    "on-process-exit": "^1.0.2",
     "prettier": "^3.5.3",
     "prettier-plugin-packagejson": "^2.5.15",
-    "tsx": "^4.19.4",
+    "tsx": "^4.20.1",
     "typescript": "^5.8.3"
   }
 }
