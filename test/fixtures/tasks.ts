@@ -18,7 +18,7 @@ if (process.argv[1] === import.meta.filename) {
     });
 
     describe('TASK_ASSERT_NO_CHANGES', () => {
-      it('does not throw with no changes in index or working directory', async () => {
+      it('does not throw with no changes in index or working tree', async () => {
         assert.doesNotThrow(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
       });
 

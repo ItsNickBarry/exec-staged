@@ -68,7 +68,7 @@ export class Stage {
   private prepare() {
     const status = this.git(['status', '-z']);
 
-    // if there are no files in index or working directory, do not attempt to stash
+    // if there are no files in index or working tree, do not attempt to stash
     if (status.length === 0) return;
 
     try {
@@ -92,7 +92,7 @@ export class Stage {
         )
       ) {
         // this error is thrown if no files are committed or staged
-        // however, the stash is successfully created and the working directory cleared
+        // however, the stash is successfully created and the working tree cleared
         // this situation is unlikely in production, but occurs in the tests
       } else {
         console.log('⚠️ Error creating backup stash!');
