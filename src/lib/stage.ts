@@ -108,6 +108,7 @@ export class Stage {
       const [command, ...args] = parseArgsStringToArgv(task);
 
       await spawn(command, args, {
+        cwd: this.cwd,
         preferLocal: true,
         stdio: 'inherit',
       });
