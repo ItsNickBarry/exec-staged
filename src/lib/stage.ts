@@ -1,8 +1,6 @@
 import { BACKUP_STASH_MESSAGE } from './constants.js';
-import { Git } from './git.js';
-import spawn from 'nano-spawn';
+import { spawn, spawnSync } from './spawn.js';
 import semver from 'semver';
-import { parseArgsStringToArgv } from 'string-argv';
 
 export class Stage {
   public readonly cwd: string;
@@ -108,14 +106,7 @@ export class Stage {
   private async run(task: string) {
     try {
       console.log(`➡️ Running task: ${task}`);
-
-      const [command, ...args] = parseArgsStringToArgv(task);
-
-      await spawn(command, args, {
-        cwd: this.cwd,
-        preferLocal: true,
-        stdio: 'inherit',
-      });
+      await spawn(this.cwd, task);
     } catch (error) {
       console.log(`⚠️ Error running task: \`${task}\`!`);
       throw error;
@@ -168,6 +159,6 @@ export class Stage {
   }
 
   protected git(args: string[]) {
-    return new Git(this.cwd).exec(args);
+    return spawnSync(this.cwd, ['git', ...args]);
   }
 }
