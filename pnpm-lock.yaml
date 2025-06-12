@@ -17,6 +17,9 @@ importers:
       simple-git:
         specifier: ^3.28.0
         version: 3.28.0
+      string-argv:
+        specifier: ^0.3.2
+        version: 0.3.2
     devDependencies:
       '@trivago/prettier-plugin-sort-imports':
         specifier: ^5.2.2

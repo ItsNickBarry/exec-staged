@@ -2,6 +2,7 @@ import { BACKUP_STASH_MESSAGE } from './constants.js';
 import spawn from 'nano-spawn';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
+import { parseArgsStringToArgv } from 'string-argv';
 
 export class Stage {
   public readonly cwd: string;
@@ -104,7 +105,7 @@ export class Stage {
     try {
       console.log(`➡️ Running task: ${task}`);
 
-      const [command, ...args] = task.split(' ');
+      const [command, ...args] = parseArgsStringToArgv(task);
 
       await spawn(command, args, {
         preferLocal: true,
