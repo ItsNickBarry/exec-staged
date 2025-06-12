@@ -1,23 +1,22 @@
 import { BACKUP_STASH_MESSAGE } from './constants.js';
+import { Git } from './git.js';
 import spawn from 'nano-spawn';
-import type { SimpleGit } from 'simple-git';
-import { simpleGit } from 'simple-git';
 import { parseArgsStringToArgv } from 'string-argv';
 
 export class Stage {
   public readonly cwd: string;
-  protected readonly git: SimpleGit;
+  protected readonly git: Git;
   protected stashed: boolean = false;
 
   constructor(cwd: string) {
     this.cwd = cwd;
-    this.git = simpleGit(cwd);
+    this.git = new Git(cwd);
   }
 
   public async exec(tasks: string[]) {
     try {
-      await this.check();
-      await this.prepare();
+      this.check();
+      this.prepare();
 
       console.log(
         `➡️ Running ${tasks.length} task${tasks.length === 1 ? '' : 's'}...`,
@@ -27,20 +26,24 @@ export class Stage {
         await this.run(task);
       }
 
-      await this.merge();
-      await this.clean();
+      this.merge();
+      this.clean();
     } catch (error) {
-      await this.revert();
-      await this.clean();
+      this.revert();
+      this.clean();
       throw error;
     }
   }
 
-  private async check() {
+  private check() {
     try {
-      const version = await this.git.version();
+      const version = this.git
+        .exec(['--version'])
+        .match(/git version (\d+\.\d+\.\d+)/)?.[1];
 
-      if (version.major < 2 || (version.major === 2 && version.minor < 14)) {
+      const [major, minor] = version!.match(/(\d+)/g)!.map((n) => parseInt(n));
+
+      if (major < 2 || (major === 2 && minor < 14)) {
         console.log('⚠️ Unsupported git version!');
         throw new Error('TODO: error');
       }
@@ -49,12 +52,14 @@ export class Stage {
       throw error;
     }
 
-    if (!(await this.git.checkIsRepo())) {
+    try {
+      this.git.exec(['rev-parse', '--is-inside-work-tree']);
+    } catch (error) {
       console.log('⚠️ Not a git repository!');
       throw new Error('TODO: error');
     }
 
-    const list = await this.git.stash(['list']);
+    const list = this.git.exec(['stash', 'list']);
 
     if (list.includes(BACKUP_STASH_MESSAGE)) {
       console.log('⚠️ Found unexpected backup stash!');
@@ -65,16 +70,18 @@ export class Stage {
     }
   }
 
-  private async prepare() {
-    const status = await this.git.status();
+  private prepare() {
+    const status = this.git.exec(['status', '-z']);
 
     // if there are no files in index or working directory, do not attempt to stash
-    if (status.files.length === 0) return;
+    if (status.length === 0) return;
 
     try {
       console.log('➡️ Creating backup stash and hiding unstaged changes...');
       // TODO: keep unstaged deletions in index
-      await this.git.stash([
+
+      this.git.exec([
+        'stash',
         'push',
         '--keep-index',
         '--include-untracked',
@@ -118,10 +125,10 @@ export class Stage {
     }
   }
 
-  private async merge() {
+  private merge() {
     try {
       console.log('➡️ Adding changes made by tasks...');
-      await this.git.add(['-A']);
+      this.git.exec(['add', '-A']);
     } catch (error) {
       console.log('⚠️ Error adding new changes!');
       throw error;
@@ -131,32 +138,32 @@ export class Stage {
 
     try {
       console.log('➡️ Restoring unstaged changes...');
-      await this.git.stash(['apply', '--index', 'stash@{0}']);
+      this.git.exec(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Error restoring unstaged changes!');
       throw error;
     }
   }
 
-  private async revert() {
+  private revert() {
     if (!this.stashed) return;
 
     try {
       console.log('➡️ Restoring state from backup stash...');
-      await this.git.reset(['--hard', 'HEAD']);
-      await this.git.stash(['apply', '--index', 'stash@{0}']);
+      this.git.exec(['reset', '--hard', 'HEAD']);
+      this.git.exec(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Failed to restore state from backup stash!');
       throw error;
     }
   }
 
-  private async clean() {
+  private clean() {
     if (!this.stashed) return;
 
     try {
       console.log('➡️ Dropping backup stash...');
-      await this.git.stash(['drop', 'stash@{0}']);
+      this.git.exec(['stash', 'drop', 'stash@{0}']);
     } catch (error) {
       console.log('⚠️ Failed to drop backup stash!');
       throw error;
