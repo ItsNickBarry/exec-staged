@@ -1,4 +1,4 @@
-import { TestStage } from '../test_stage';
+import { TestStage } from './test_stage';
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
 

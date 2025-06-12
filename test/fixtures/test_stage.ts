@@ -1,8 +1,8 @@
-import pkg from '../package.json';
-import execStaged from '../src/index.js';
-import { spawnSync } from '../src/lib/spawn';
-import { Stage } from '../src/lib/stage';
-import type { ExitCode } from '../src/types.js';
+import pkg from '../../package.json';
+import { execStaged } from '../../src/lib/exec_staged.js';
+import { spawnSync } from '../../src/lib/spawn.js';
+import { Stage } from '../../src/lib/stage.js';
+import type { ExitCode } from '../../src/types.js';
 import envPaths from 'env-paths';
 import assert from 'node:assert';
 import fs from 'node:fs';

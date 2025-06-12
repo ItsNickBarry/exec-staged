@@ -1,5 +1,5 @@
 import { loadConfig, parseTasks } from '../src/lib/config.js';
-import { TestStage } from './test_stage.js';
+import { TestStage } from './fixtures/test_stage.js';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
