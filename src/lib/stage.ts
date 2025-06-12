@@ -1,6 +1,7 @@
 import { BACKUP_STASH_MESSAGE } from './constants.js';
 import { Git } from './git.js';
 import spawn from 'nano-spawn';
+import semver from 'semver';
 import { parseArgsStringToArgv } from 'string-argv';
 
 export class Stage {
@@ -41,9 +42,7 @@ export class Stage {
         .exec(['--version'])
         .match(/git version (\d+\.\d+\.\d+)/)?.[1];
 
-      const [major, minor] = version!.match(/(\d+)/g)!.map((n) => parseInt(n));
-
-      if (major < 2 || (major === 2 && minor < 14)) {
+      if (!version || semver.lte(version, '2.13.0')) {
         console.log('⚠️ Unsupported git version!');
         throw new Error('TODO: error');
       }

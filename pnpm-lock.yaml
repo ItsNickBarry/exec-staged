@@ -14,6 +14,9 @@ importers:
       nano-spawn:
         specifier: ^1.0.2
         version: 1.0.2
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
       string-argv:
         specifier: ^0.3.2
         version: 0.3.2
@@ -27,6 +30,9 @@ importers:
       '@types/node':
         specifier: ^22.15.31
         version: 22.15.31
+      '@types/semver':
+        specifier: ^7.7.0
+        version: 7.7.0
       env-paths:
         specifier: ^3.0.0
         version: 3.0.0
@@ -375,6 +381,9 @@ packages:
 
   '@types/node@22.15.31':
     resolution: {integrity: sha512-jnVe5ULKl6tijxUhvQeNbQG/84fHfg+yMak02cT8QVhBx/F05rAVxCGBYYTh2EKz22D6JF5ktXuNwdx7b9iEGw==}
+
+  '@types/semver@7.7.0':
+    resolution: {integrity: sha512-k107IF4+Xr7UHjwDc7Cfd6PRQfbdkiRabXGRjo07b4WyPahFBZCZ1sE+BNxYIJPPg73UkfOsVOLwqVc/6ETrIA==}
 
   ansi-escapes@7.0.0:
     resolution: {integrity: sha512-GdYO7a61mR0fOlAsvC9/rIHf7L96sBc6dEWzeOu+KAea5bZyQRPIpojrVoI4AXGJS/ycu/fBTdLrUkA4ODrvjw==}
@@ -991,6 +1000,8 @@ snapshots:
   '@types/node@22.15.31':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/semver@7.7.0': {}
 
   ansi-escapes@7.0.0:
     dependencies:
