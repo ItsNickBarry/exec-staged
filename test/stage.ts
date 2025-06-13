@@ -195,11 +195,11 @@ describe('Stage', () => {
 
   describe('::run', () => {
     it('runs task', async () => {
-      await assert.doesNotReject(async () => stage.run(TASK_EXIT_0));
+      await assert.doesNotReject(async () => stage.run([TASK_EXIT_0]));
     });
 
     it('throws if task fails', async () => {
-      await assert.rejects(async () => stage.run(TASK_EXIT_1));
+      await assert.rejects(async () => stage.run([TASK_EXIT_1]));
     });
   });
 

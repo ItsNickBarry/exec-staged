@@ -19,15 +19,7 @@ export class Stage {
     try {
       this.check();
       this.prepare();
-
-      this.log(
-        `➡️ Running ${tasks.length} task${tasks.length === 1 ? '' : 's'}...`,
-      );
-
-      for (const task of tasks) {
-        await this.run(task);
-      }
-
+      await this.run(tasks);
       this.merge();
       this.clean();
     } catch (error) {
@@ -98,13 +90,19 @@ export class Stage {
     // TODO: restore merge status
   }
 
-  protected async run(task: string) {
-    try {
-      this.log(`➡️ Running task: ${task}`);
-      await spawn(this.cwd, task);
-    } catch (error) {
-      this.log(`⚠️ Error running task: \`${task}\`!`);
-      throw error;
+  protected async run(tasks: string[]) {
+    this.log(
+      `➡️ Running ${tasks.length} task${tasks.length === 1 ? '' : 's'}...`,
+    );
+
+    for (const task of tasks) {
+      try {
+        this.log(`➡️ Running task: ${task}`);
+        await spawn(this.cwd, task);
+      } catch (error) {
+        this.log(`⚠️ Error running task: \`${task}\`!`);
+        throw error;
+      }
     }
   }
 

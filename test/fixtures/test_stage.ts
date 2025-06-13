@@ -14,7 +14,7 @@ const TEST_STAGE_OPTIONS: StageOptions = { quiet: true };
 export class TestStage extends Stage {
   declare public check: () => void;
   declare public prepare: () => void;
-  declare public run: (task: string) => Promise<void>;
+  declare public run: (tasks: string[]) => Promise<void>;
   declare public merge: () => void;
   declare public revert: () => void;
   declare public clean: () => void;
