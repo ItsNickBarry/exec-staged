@@ -107,6 +107,90 @@ describe('Stage', () => {
 
       assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
+
+    it('hides new files in working tree', async () => {
+      await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), '');
+    });
+
+    it('hides unstaged changes in working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add files']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), '');
+    });
+
+    it('hides unstaged changes in working tree to partially staged files but not staged changes in index', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      assert.equal(stage.git(['status', '--porcelain']), 'AM test.txt\n');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+    });
+
+    it('hides unstaged deleted files in working tree (restores them)', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+
+      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt\n');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), '');
+    });
+
+    it('does not hide new files in index', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+    });
+
+    it('does not hide staged changes in index', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add files']);
+      await stage.writeFile('test.txt', 'new contents');
+      stage.git(['add', 'test.txt']);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt\n');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt\n');
+    });
+
+    it('does not hide staged deleted files in index', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt\n');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt\n');
+    });
   });
 
   describe('::run', () => {
