@@ -255,6 +255,16 @@ describe('Stage', () => {
 
       assert.equal(stage.git(['status', '--porcelain']), '');
     });
+
+    it('does not drop backup stash', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.merge();
+
+      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
   });
 
   describe('::revert', () => {
@@ -381,6 +391,16 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(oldStatus, newStatus);
+    });
+
+    it('does not drop backup stash', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.revert();
+
+      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
   });
 
