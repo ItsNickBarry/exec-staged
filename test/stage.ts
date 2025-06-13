@@ -240,6 +240,30 @@ describe('Stage', () => {
   });
 
   describe('::clean', () => {
-    it('todo');
+    it('does nothing if no backup stash exists', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.git(['stash']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      const oldStashList = stage.git(['stash', 'list']);
+      stage.clean();
+      const newStatus = stage.git(['status', '-z']);
+      const newStashList = stage.git(['stash', 'list']);
+
+      assert.equal(oldStatus, newStatus);
+      assert.equal(oldStashList, newStashList);
+    });
+
+    it('drops backup stash', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.clean();
+
+      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
   });
 });
