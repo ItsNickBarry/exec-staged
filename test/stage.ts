@@ -204,8 +204,6 @@ describe('Stage', () => {
   });
 
   describe('::merge', () => {
-    it('todo');
-
     it('does nothing if no backup stash exists and no files were modified by tasks', async () => {
       await stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
@@ -255,6 +253,105 @@ describe('Stage', () => {
 
       assert.equal(stage.git(['status', '--porcelain']), '');
     });
+
+    it('restores stashed new files in working tree', async () => {
+      await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('maintains stashed new files in index', async () => {
+      await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
+      stage.git(['add', 'test.txt', 'subdirectory/test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores stashed unstaged changes in working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('maintains stashed staged changes in index', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.writeFile('test.txt', 'new contents');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores stashed changes to partially staged files in index and working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+      assert.equal(await stage.readFile('test.txt'), 'new contents');
+    });
+
+    it('restores stashed unstaged deleted files in working tree', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('maintains stashed staged deleted files in index', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('todo');
 
     it('does not drop backup stash', async () => {
       await stage.writeFile('test.txt');
@@ -362,6 +459,7 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(oldStatus, newStatus);
+      assert.equal(await stage.readFile('test.txt'), 'new contents');
     });
 
     it('restores unstaged deleted files in working tree', async () => {
