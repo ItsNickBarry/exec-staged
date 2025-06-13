@@ -20,6 +20,7 @@ export const spawnSync = (cwd: string, args: string | string[]): string => {
 
   const result = child_process.spawnSync(args[0], args.slice(1), {
     cwd,
+    encoding: 'utf-8',
   });
 
   const { status, signal, stdout } = result;
@@ -38,7 +39,7 @@ export const spawnSync = (cwd: string, args: string | string[]): string => {
     );
   }
 
-  return stdout.toString();
+  return stdout;
 };
 
 /**
