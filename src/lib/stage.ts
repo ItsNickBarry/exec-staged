@@ -70,7 +70,6 @@ export class Stage {
 
     try {
       this.log('➡️ Creating backup stash and hiding unstaged changes...');
-      // TODO: keep unstaged deletions in index
 
       this.git([
         'stash',
