@@ -70,7 +70,7 @@ export const spawn = async (
 
   subprocess.nodeChildProcess.then((child) => {
     const id = registerExitHandler(() => child.kill());
-    subprocess.then(() => deregisterExitHandler(id));
+    child.once('close', () => deregisterExitHandler(id));
   });
 
   return (await subprocess).stdout;
