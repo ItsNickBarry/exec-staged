@@ -215,8 +215,8 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       const newStashList = stage.git(['stash', 'list']);
 
-      assert.equal(oldStatus, newStatus);
-      assert.equal(oldStashList, newStashList);
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStashList, oldStashList);
     });
 
     it('adds changes made by tasks', async () => {
@@ -263,7 +263,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('maintains stashed new files in index', async () => {
@@ -276,7 +276,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores stashed unstaged changes in working tree', async () => {
@@ -290,7 +290,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('maintains stashed staged changes in index', async () => {
@@ -305,7 +305,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores stashed changes to partially staged files in index and working tree', async () => {
@@ -318,7 +318,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'new contents');
     });
 
@@ -333,7 +333,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('maintains stashed staged deleted files in index', async () => {
@@ -348,7 +348,7 @@ describe('Stage', () => {
       stage.merge();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('todo');
@@ -376,8 +376,8 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       const newStashList = stage.git(['stash', 'list']);
 
-      assert.equal(oldStatus, newStatus);
-      assert.equal(oldStashList, newStashList);
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStashList, oldStashList);
     });
 
     it('deletes changes not present in backup stash', async () => {
@@ -390,7 +390,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'old contents');
     });
 
@@ -403,7 +403,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores new files in index', async () => {
@@ -416,7 +416,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores unstaged changes in working tree', async () => {
@@ -430,7 +430,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores staged changes in index', async () => {
@@ -445,7 +445,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores changes to partially staged files in index and working tree', async () => {
@@ -458,7 +458,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'new contents');
     });
 
@@ -473,7 +473,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('restores staged deleted files in index', async () => {
@@ -488,7 +488,7 @@ describe('Stage', () => {
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
 
-      assert.equal(oldStatus, newStatus);
+      assert.equal(newStatus, oldStatus);
     });
 
     it('does not drop backup stash', async () => {
@@ -514,8 +514,8 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       const newStashList = stage.git(['stash', 'list']);
 
-      assert.equal(oldStatus, newStatus);
-      assert.equal(oldStashList, newStashList);
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStashList, oldStashList);
     });
 
     it('drops backup stash', async () => {
