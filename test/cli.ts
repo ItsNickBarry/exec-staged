@@ -32,6 +32,7 @@ describe('CLI', () => {
 
     const newStatus = stage.git(['status', '-z']);
 
+    assert.equal(child.exitCode, 1);
     assert.equal(newStatus, oldStatus);
     assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
   });
