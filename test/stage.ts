@@ -74,6 +74,16 @@ describe('Stage', () => {
       assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
 
+    it('creates a stash if partially staged changes are in index and working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      stage.prepare();
+
+      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
+
     it('creates a stash if deleted files are in working tree', async () => {
       await stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
