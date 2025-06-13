@@ -109,8 +109,13 @@ export class Stage {
   }
 
   protected merge() {
+    let stash: string | undefined;
+
     if (this.stashed) {
       this.log('➡️ Cleaning up redundant files in index...');
+
+      // attempt to retrieve the stash before running any damaging operations
+      stash = this.findBackupStash();
 
       const unchangedFiles = this.git(['status', '--porcelain'])
         .split('\n')
@@ -147,7 +152,7 @@ export class Stage {
 
     try {
       this.log('➡️ Restoring unstaged changes...');
-      this.git(['stash', 'apply', '--index', 'stash@{0}']);
+      this.git(['stash', 'apply', '--index', stash!]);
     } catch (error) {
       this.log('⚠️ Error restoring unstaged changes!');
       throw error;
@@ -159,9 +164,13 @@ export class Stage {
 
     try {
       this.log('➡️ Restoring state from backup stash...');
+
+      // attempt to retrieve the stash before running any damaging operations
+      const stash = this.findBackupStash();
+
       this.git(['add', '-A']);
       this.git(['reset', '--hard', 'HEAD']);
-      this.git(['stash', 'apply', '--index', 'stash@{0}']);
+      this.git(['stash', 'apply', '--index', stash]);
     } catch (error) {
       this.log('⚠️ Failed to restore state from backup stash!');
       throw error;
@@ -173,7 +182,7 @@ export class Stage {
 
     try {
       this.log('➡️ Dropping backup stash...');
-      this.git(['stash', 'drop', 'stash@{0}']);
+      this.git(['stash', 'drop', this.findBackupStash()]);
     } catch (error) {
       this.log('⚠️ Failed to drop backup stash!');
       throw error;
@@ -182,6 +191,22 @@ export class Stage {
 
   protected git(args: string[]) {
     return spawnSync(this.cwd, ['git', ...args]);
+  }
+
+  private findBackupStash(): string {
+    if (this.stashed) {
+      const index = this.git(['stash', 'list'])
+        .split('\n')
+        .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
+
+      if (index === -1) {
+        throw new Error('TODO: error');
+      }
+
+      return `stash@{${index}}`;
+    } else {
+      return '';
+    }
   }
 
   private log(...params: Parameters<typeof console.log>): void {
