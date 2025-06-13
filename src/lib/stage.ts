@@ -1,6 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
 import type { StageOptions } from '../types.js';
-import { BACKUP_STASH_MESSAGE } from './constants.js';
+import { BACKUP_STASH_MESSAGE, stageLifecycleMessages } from './constants.js';
 import { spawn, spawnSync } from './spawn.js';
 import envPaths from 'env-paths';
 import fs from 'node:fs';
@@ -39,6 +39,7 @@ export class Stage {
   }
 
   protected check() {
+    this.log(stageLifecycleMessages.check);
     let version: string | undefined;
 
     try {
@@ -74,13 +75,14 @@ export class Stage {
   }
 
   protected prepare() {
+    this.log(stageLifecycleMessages.prepare);
     const status = this.git(['status', '-z']);
 
     // if there are no files in index or working tree, do not attempt to stash
     if (status.length === 0) return;
 
     try {
-      this.log('➡️ Creating backup stash and hiding unstaged changes...');
+      this.debug('➡️ ➡️ Creating backup stash and hiding unstaged changes...');
 
       this.git([
         'stash',
@@ -101,14 +103,20 @@ export class Stage {
   }
 
   protected async run(tasks: string[]) {
-    this.log(`➡️ Running tasks...`);
+    this.log(stageLifecycleMessages.run);
 
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
 
       try {
         this.log(`➡️ Running task ${i + 1} of ${tasks.length}: \`${task}\`...`);
-        await spawn(this.cwd, task);
+        const output = await spawn(this.cwd, task);
+        this.debug(
+          output
+            .split('\n')
+            .map((line) => `> ${line}`)
+            .join('\n'),
+        );
       } catch (error) {
         this.log(`⚠️ Error running task: \`${task}\`!`);
         throw error;
@@ -117,10 +125,12 @@ export class Stage {
   }
 
   protected merge() {
+    this.log(stageLifecycleMessages.merge);
+
     let stash: string | undefined;
 
     if (this.stashed) {
-      this.log('➡️ Cleaning up redundant files in index...');
+      this.debug('➡️ ➡️ Cleaning up redundant files in index...');
 
       // attempt to retrieve the stash before running any damaging operations
       stash = this.findBackupStash();
@@ -149,7 +159,7 @@ export class Stage {
     }
 
     try {
-      this.log('➡️ Adding changes made by tasks...');
+      this.debug('➡️ ➡️ Adding changes made by tasks...');
       this.git(['add', '-A']);
     } catch (error) {
       this.log('⚠️ Error adding new changes!');
@@ -159,19 +169,21 @@ export class Stage {
     if (!this.stashed) return;
 
     try {
-      this.log('➡️ Restoring unstaged changes...');
+      this.debug('➡️ ➡️ Restoring unstaged changes from stash...');
       this.git(['stash', 'apply', '--index', stash!]);
     } catch (error) {
-      this.log('⚠️ Error restoring unstaged changes!');
+      this.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
     }
   }
 
   protected revert() {
+    this.log(stageLifecycleMessages.revert);
+
     if (!this.stashed) return;
 
     try {
-      this.log('➡️ Restoring state from backup stash...');
+      this.debug('➡️ ➡️ Restoring state from backup stash...');
 
       // attempt to retrieve the stash before running any damaging operations
       const stash = this.findBackupStash();
@@ -186,10 +198,11 @@ export class Stage {
   }
 
   protected clean() {
+    this.log(stageLifecycleMessages.clean);
+
     if (!this.stashed) return;
 
     try {
-      this.log('➡️ Dropping backup stash...');
       this.git(['stash', 'drop', this.findBackupStash()]);
     } catch (error) {
       this.log('⚠️ Failed to drop backup stash!');
@@ -197,8 +210,16 @@ export class Stage {
     }
   }
 
-  protected git(args: string[]) {
-    return spawnSync(this.cwd, ['git', ...args]);
+  protected git(args: string[]): string {
+    this.debug(`git: ${args.map((arg) => `[${arg}]`).join(' ')}`);
+    const output = spawnSync(this.cwd, ['git', ...args]);
+    this.debug(
+      output
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n'),
+    );
+    return output;
   }
 
   private findBackupStash(): string {
