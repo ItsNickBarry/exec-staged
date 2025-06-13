@@ -205,18 +205,72 @@ describe('Stage', () => {
 
   describe('::merge', () => {
     it('todo');
+
+    it('does nothing if no backup stash exists and no files were modified by tasks', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['stash', '-m', 'not a backup stash']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      const oldStashList = stage.git(['stash', 'list']);
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+      const newStashList = stage.git(['stash', 'list']);
+
+      assert.equal(oldStatus, newStatus);
+      assert.equal(oldStashList, newStashList);
+    });
+
+    it('adds changes made by tasks', async () => {
+      await stage.writeFile('test.txt', 'old content');
+      stage.git(['add', 'test.txt']);
+
+      // pretend that this was done by a task
+      await stage.writeFile('test.txt', 'new content');
+
+      stage.merge();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(await stage.readFile('test.txt'), 'new content');
+    });
+
+    it('adds new files created by tasks', async () => {
+      // pretend that this was done by a task
+      await stage.writeFile('test.txt', 'new content');
+
+      stage.merge();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(await stage.readFile('test.txt'), 'new content');
+    });
+
+    it('adds files deleted by tasks', async () => {
+      await stage.writeFile('test.txt', 'old content');
+      stage.git(['add', 'test.txt']);
+
+      // pretend that this was done by a task
+      await stage.rm('test.txt');
+
+      stage.merge();
+
+      assert.equal(stage.git(['status', '--porcelain']), '');
+    });
   });
 
   describe('::revert', () => {
     it('does nothing if no backup stash exists', async () => {
       await stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
+      stage.git(['stash', '-m', 'not a backup stash']);
 
       const oldStatus = stage.git(['status', '-z']);
+      const oldStashList = stage.git(['stash', 'list']);
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
+      const newStashList = stage.git(['stash', 'list']);
 
       assert.equal(oldStatus, newStatus);
+      assert.equal(oldStashList, newStashList);
     });
 
     it('deletes changes not present in backup stash', async () => {
@@ -334,8 +388,7 @@ describe('Stage', () => {
     it('does nothing if no backup stash exists', async () => {
       await stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
-
-      stage.git(['stash']);
+      stage.git(['stash', '-m', 'not a backup stash']);
 
       const oldStatus = stage.git(['status', '-z']);
       const oldStashList = stage.git(['stash', 'list']);
