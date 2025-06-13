@@ -1,6 +1,8 @@
 import type { StageOptions } from '../types.js';
 import { BACKUP_STASH_MESSAGE } from './constants.js';
 import { spawn, spawnSync } from './spawn.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import semver from 'semver';
 
 export class Stage {
@@ -107,6 +109,32 @@ export class Stage {
   }
 
   protected merge() {
+    if (this.stashed) {
+      this.log('➡️ Cleaning up redundant files in index...');
+
+      const unchangedFiles = this.git(['status', '--porcelain'])
+        .split('\n')
+        .filter((f) => f.match(/^. /));
+
+      if (unchangedFiles.length) {
+        this.git(['reset', '--', ...unchangedFiles.map((f) => f.slice(3))]);
+
+        const tracked = unchangedFiles.filter((f) => f.match(/^[^A]/));
+
+        if (tracked.length) {
+          this.git(['restore', ...tracked.map((f) => f.slice(3))]);
+        }
+
+        const untracked = unchangedFiles.filter((f) => f.match(/^[A]/));
+
+        if (untracked.length) {
+          untracked.forEach((f) =>
+            fs.rmSync(path.resolve(this.cwd, f.slice(3))),
+          );
+        }
+      }
+    }
+
     try {
       this.log('➡️ Adding changes made by tasks...');
       this.git(['add', '-A']);
