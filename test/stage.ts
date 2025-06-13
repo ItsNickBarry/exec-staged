@@ -34,6 +34,7 @@ describe('Stage', () => {
 
     it('creates a stash if new files are in working tree', async () => {
       await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
 
       stage.prepare();
 
@@ -42,7 +43,8 @@ describe('Stage', () => {
 
     it('creates a stash if new files are in index', async () => {
       await stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
+      await stage.writeFile('subdirectory/test.txt');
+      stage.git(['add', 'test.txt', 'subdirectory/test.txt']);
 
       stage.prepare();
 
@@ -105,7 +107,126 @@ describe('Stage', () => {
   });
 
   describe('::revert', () => {
-    it('todo');
+    it('does nothing if no backup stash exists', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('deletes changes not present in backup stash', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      await stage.writeFile('test.txt', 'new contents');
+      await stage.writeFile('new_test.txt');
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+      assert.equal(await stage.readFile('test.txt'), 'old contents');
+    });
+
+    it('restores new files in working tree', async () => {
+      await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores new files in index', async () => {
+      await stage.writeFile('test.txt');
+      await stage.writeFile('subdirectory/test.txt');
+      stage.git(['add', 'test.txt', 'subdirectory/test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores unstaged changes in working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores staged changes in index', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.writeFile('test.txt', 'new contents');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores changes to partially staged files in index and working tree', async () => {
+      await stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      await stage.writeFile('test.txt', 'new contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores unstaged deleted files in working tree', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
+
+    it('restores staged deleted files in index', async () => {
+      await stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      await stage.rm('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(oldStatus, newStatus);
+    });
   });
 
   describe('::clean', () => {

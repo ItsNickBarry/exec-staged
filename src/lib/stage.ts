@@ -128,6 +128,7 @@ export class Stage {
 
     try {
       console.log('➡️ Restoring state from backup stash...');
+      this.git(['add', '-A']);
       this.git(['reset', '--hard', 'HEAD']);
       this.git(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {

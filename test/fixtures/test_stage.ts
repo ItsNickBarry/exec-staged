@@ -18,6 +18,12 @@ export class TestStage extends Stage {
   declare public clean: () => void;
   declare public git: (args: string[]) => string;
 
+  public async readFile(relativePath: string): Promise<string> {
+    assert(!path.isAbsolute(relativePath));
+    const absolutePath = path.resolve(this.cwd, relativePath);
+    return await fs.promises.readFile(absolutePath, 'utf-8');
+  }
+
   public async writeFile(relativePath: string, contents: string = '') {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
