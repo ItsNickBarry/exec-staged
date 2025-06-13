@@ -1,4 +1,5 @@
 import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
+import { TASK_EXIT_0, TASK_EXIT_1 } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
@@ -108,8 +109,14 @@ describe('Stage', () => {
     });
   });
 
-  describe('::exec', () => {
-    it('todo');
+  describe('::run', () => {
+    it('runs task', async () => {
+      await assert.doesNotReject(async () => stage.run(TASK_EXIT_0));
+    });
+
+    it('throws if task fails', async () => {
+      await assert.rejects(async () => stage.run(TASK_EXIT_1));
+    });
   });
 
   describe('::merge', () => {
