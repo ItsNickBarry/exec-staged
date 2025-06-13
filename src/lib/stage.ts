@@ -101,13 +101,13 @@ export class Stage {
   }
 
   protected async run(tasks: string[]) {
-    this.log(
-      `➡️ Running ${tasks.length} task${tasks.length === 1 ? '' : 's'}...`,
-    );
+    this.log(`➡️ Running tasks...`);
 
-    for (const task of tasks) {
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+
       try {
-        this.log(`➡️ Running task: ${task}`);
+        this.log(`➡️ Running task ${i + 1} of ${tasks.length}: \`${task}\`...`);
         await spawn(this.cwd, task);
       } catch (error) {
         this.log(`⚠️ Error running task: \`${task}\`!`);
