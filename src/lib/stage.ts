@@ -30,18 +30,20 @@ export class Stage {
   }
 
   protected check() {
+    let version: string | undefined;
+
     try {
-      const version = this.git(['--version']).match(
+      version = this.git(['--version']).match(
         /git version (\d+\.\d+\.\d+)/,
       )?.[1];
-
-      if (!version || semver.lte(version, '2.13.0')) {
-        this.log('⚠️ Unsupported git version!');
-        throw new Error('TODO: error');
-      }
     } catch (error) {
       this.log('⚠️ Git installation not found!');
       throw error;
+    }
+
+    if (!version || semver.lte(version, '2.13.0')) {
+      this.log('⚠️ Unsupported git version!');
+      throw new Error('TODO: error');
     }
 
     try {
