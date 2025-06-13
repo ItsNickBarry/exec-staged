@@ -24,29 +24,29 @@ export class TestStage extends Stage {
     super(cwd, TEST_STAGE_OPTIONS);
   }
 
-  public async readFile(relativePath: string): Promise<string> {
+  public readFile(relativePath: string): string {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
-    return await fs.promises.readFile(absolutePath, 'utf-8');
+    return fs.readFileSync(absolutePath, 'utf-8');
   }
 
-  public async writeFile(relativePath: string, contents: string = '') {
+  public writeFile(relativePath: string, contents: string = '') {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
-    await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
-    await fs.promises.writeFile(absolutePath, contents);
+    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+    fs.writeFileSync(absolutePath, contents);
   }
 
-  public async mkdir(relativePath: string) {
+  public mkdir(relativePath: string) {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
-    await fs.promises.mkdir(absolutePath, { recursive: true });
+    fs.mkdirSync(absolutePath, { recursive: true });
   }
 
-  public async rm(relativePath: string) {
+  public rm(relativePath: string) {
     assert(!path.isAbsolute(relativePath));
     const absolutePath = path.resolve(this.cwd, relativePath);
-    await fs.promises.rm(absolutePath, { recursive: true, force: true });
+    fs.rmSync(absolutePath, { recursive: true, force: true });
   }
 
   public async execStaged(tasks: string[]): Promise<ExitCode> {
@@ -57,15 +57,15 @@ export class TestStage extends Stage {
     return spawnSync(this.cwd, task);
   }
 
-  public static async create() {
+  public static create() {
     const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
 
     registerExitHandler(() => {
       fs.rmSync(cwd, { recursive: true, force: true });
     });
 
-    await fs.promises.mkdir(cwd, { recursive: true });
-    await fs.promises.writeFile(
+    fs.mkdirSync(cwd, { recursive: true });
+    fs.writeFileSync(
       path.resolve(cwd, 'package.json'),
       JSON.stringify({ type: 'module' }),
     );

@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 
 describe('loadConfig', () => {
   it('returns config from exec-staged.config.js', async () => {
-    const { cwd } = await TestStage.create();
+    const { cwd } = TestStage.create();
     await fs.promises.writeFile(
       path.resolve(cwd, 'exec-staged.config.js'),
       `export default { '*': "echo 'task'" };`,
@@ -16,7 +16,7 @@ describe('loadConfig', () => {
   });
 
   it('returns config from .exec-stagedrc.json', async () => {
-    const { cwd } = await TestStage.create();
+    const { cwd } = TestStage.create();
     await fs.promises.writeFile(
       path.resolve(cwd, '.exec-stagedrc.json'),
       JSON.stringify({ '*': "echo 'task'" }),
@@ -25,7 +25,7 @@ describe('loadConfig', () => {
   });
 
   it('returns empty config if no config is found', async () => {
-    const { cwd } = await TestStage.create();
+    const { cwd } = TestStage.create();
     assert.deepEqual(await loadConfig(cwd), {});
   });
 });

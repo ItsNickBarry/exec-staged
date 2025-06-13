@@ -14,7 +14,7 @@ if (process.argv[1] === import.meta.filename) {
     let stage: TestStage;
 
     beforeEach(async () => {
-      stage = await TestStage.create();
+      stage = TestStage.create();
     });
 
     describe('TASK_ASSERT_NO_CHANGES', () => {
@@ -23,42 +23,42 @@ if (process.argv[1] === import.meta.filename) {
       });
 
       it('throws with untracked files', async () => {
-        await stage.writeFile('test.txt');
+        stage.writeFile('test.txt');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
       });
 
       it('throws with unstaged changes to tracked files', async () => {
-        await stage.writeFile('test.txt', 'old contents');
+        stage.writeFile('test.txt', 'old contents');
         stage.git(['add', 'test.txt']);
         stage.git(['commit', '-m', 'add files']);
-        await stage.writeFile('test.txt', 'new contents');
+        stage.writeFile('test.txt', 'new contents');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
       });
 
       it('throws with partially staged changes to tracked files', async () => {
-        await stage.writeFile('test.txt', 'old contents');
+        stage.writeFile('test.txt', 'old contents');
         stage.git(['add', 'test.txt']);
-        await stage.writeFile('test.txt', 'new contents');
+        stage.writeFile('test.txt', 'new contents');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
       });
 
       it('throws with unstaged deletions', async () => {
-        await stage.writeFile('test.txt');
+        stage.writeFile('test.txt');
         stage.git(['add', 'test.txt']);
         stage.git(['commit', '-m', 'add file']);
-        await stage.rm('test.txt');
+        stage.rm('test.txt');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
       });
 
       it('throws with staged deletions', async () => {
-        await stage.writeFile('test.txt');
+        stage.writeFile('test.txt');
         stage.git(['add', 'test.txt']);
         stage.git(['commit', '-m', 'add file']);
-        await stage.rm('test.txt');
+        stage.rm('test.txt');
         stage.git(['add', 'test.txt']);
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_CHANGES));
@@ -73,7 +73,7 @@ if (process.argv[1] === import.meta.filename) {
       });
 
       it('does not throw with staged changes', async () => {
-        await stage.writeFile('test.txt', 'old contents');
+        stage.writeFile('test.txt', 'old contents');
         stage.git(['add', 'test.txt']);
 
         assert.doesNotThrow(() =>
@@ -81,7 +81,7 @@ if (process.argv[1] === import.meta.filename) {
         );
 
         stage.git(['commit', '-m', 'add files']);
-        await stage.writeFile('test.txt', 'new contents');
+        stage.writeFile('test.txt', 'new contents');
         stage.git(['add', 'test.txt']);
 
         assert.doesNotThrow(() =>
@@ -90,33 +90,33 @@ if (process.argv[1] === import.meta.filename) {
       });
 
       it('throws with untracked files', async () => {
-        await stage.writeFile('test.txt');
+        stage.writeFile('test.txt');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_UNSTAGED_CHANGES));
       });
 
       it('throws with unstaged changes to tracked files', async () => {
-        await stage.writeFile('test.txt', 'old contents');
+        stage.writeFile('test.txt', 'old contents');
         stage.git(['add', 'test.txt']);
         stage.git(['commit', '-m', 'add files']);
-        await stage.writeFile('test.txt', 'new contents');
+        stage.writeFile('test.txt', 'new contents');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_UNSTAGED_CHANGES));
       });
 
       it('throws with partially staged changes to tracked files', async () => {
-        await stage.writeFile('test.txt', 'old contents');
+        stage.writeFile('test.txt', 'old contents');
         stage.git(['add', 'test.txt']);
-        await stage.writeFile('test.txt', 'new contents');
+        stage.writeFile('test.txt', 'new contents');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_UNSTAGED_CHANGES));
       });
 
       it('throws with unstaged deletions', async () => {
-        await stage.writeFile('test.txt');
+        stage.writeFile('test.txt');
         stage.git(['add', 'test.txt']);
         stage.git(['commit', '-m', 'add file']);
-        await stage.rm('test.txt');
+        stage.rm('test.txt');
 
         assert.throws(() => stage.spawnSync(TASK_ASSERT_NO_UNSTAGED_CHANGES));
       });
