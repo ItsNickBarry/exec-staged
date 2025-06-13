@@ -1,3 +1,4 @@
+import type { StageOptions } from '../types.js';
 import { BACKUP_STASH_MESSAGE } from './constants.js';
 import { spawn, spawnSync } from './spawn.js';
 import semver from 'semver';
@@ -5,9 +6,11 @@ import semver from 'semver';
 export class Stage {
   public readonly cwd: string;
   protected stashed: boolean = false;
+  protected quiet: boolean;
 
-  constructor(cwd: string) {
+  constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
+    this.quiet = Boolean(options.quiet);
   }
 
   public async exec(tasks: string[]) {
@@ -15,7 +18,7 @@ export class Stage {
       this.check();
       this.prepare();
 
-      console.log(
+      this.log(
         `➡️ Running ${tasks.length} task${tasks.length === 1 ? '' : 's'}...`,
       );
 
@@ -39,26 +42,26 @@ export class Stage {
       )?.[1];
 
       if (!version || semver.lte(version, '2.13.0')) {
-        console.log('⚠️ Unsupported git version!');
+        this.log('⚠️ Unsupported git version!');
         throw new Error('TODO: error');
       }
     } catch (error) {
-      console.log('⚠️ Git installation not found!');
+      this.log('⚠️ Git installation not found!');
       throw error;
     }
 
     try {
       this.git(['rev-parse', '--is-inside-work-tree']);
     } catch (error) {
-      console.log('⚠️ Not a git repository!');
+      this.log('⚠️ Not a git repository!');
       throw new Error('TODO: error');
     }
 
     const list = this.git(['stash', 'list']);
 
     if (list.includes(BACKUP_STASH_MESSAGE)) {
-      console.log('⚠️ Found unexpected backup stash!');
-      console.log(
+      this.log('⚠️ Found unexpected backup stash!');
+      this.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
       );
       throw new Error('TODO: error');
@@ -72,7 +75,7 @@ export class Stage {
     if (status.length === 0) return;
 
     try {
-      console.log('➡️ Creating backup stash and hiding unstaged changes...');
+      this.log('➡️ Creating backup stash and hiding unstaged changes...');
       // TODO: keep unstaged deletions in index
 
       this.git([
@@ -86,7 +89,7 @@ export class Stage {
 
       this.stashed = true;
     } catch (error) {
-      console.log('⚠️ Error creating backup stash!');
+      this.log('⚠️ Error creating backup stash!');
       throw error;
     }
 
@@ -95,30 +98,30 @@ export class Stage {
 
   protected async run(task: string) {
     try {
-      console.log(`➡️ Running task: ${task}`);
+      this.log(`➡️ Running task: ${task}`);
       await spawn(this.cwd, task);
     } catch (error) {
-      console.log(`⚠️ Error running task: \`${task}\`!`);
+      this.log(`⚠️ Error running task: \`${task}\`!`);
       throw error;
     }
   }
 
   protected merge() {
     try {
-      console.log('➡️ Adding changes made by tasks...');
+      this.log('➡️ Adding changes made by tasks...');
       this.git(['add', '-A']);
     } catch (error) {
-      console.log('⚠️ Error adding new changes!');
+      this.log('⚠️ Error adding new changes!');
       throw error;
     }
 
     if (!this.stashed) return;
 
     try {
-      console.log('➡️ Restoring unstaged changes...');
+      this.log('➡️ Restoring unstaged changes...');
       this.git(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
-      console.log('⚠️ Error restoring unstaged changes!');
+      this.log('⚠️ Error restoring unstaged changes!');
       throw error;
     }
   }
@@ -127,12 +130,12 @@ export class Stage {
     if (!this.stashed) return;
 
     try {
-      console.log('➡️ Restoring state from backup stash...');
+      this.log('➡️ Restoring state from backup stash...');
       this.git(['add', '-A']);
       this.git(['reset', '--hard', 'HEAD']);
       this.git(['stash', 'apply', '--index', 'stash@{0}']);
     } catch (error) {
-      console.log('⚠️ Failed to restore state from backup stash!');
+      this.log('⚠️ Failed to restore state from backup stash!');
       throw error;
     }
   }
@@ -141,15 +144,21 @@ export class Stage {
     if (!this.stashed) return;
 
     try {
-      console.log('➡️ Dropping backup stash...');
+      this.log('➡️ Dropping backup stash...');
       this.git(['stash', 'drop', 'stash@{0}']);
     } catch (error) {
-      console.log('⚠️ Failed to drop backup stash!');
+      this.log('⚠️ Failed to drop backup stash!');
       throw error;
     }
   }
 
   protected git(args: string[]) {
     return spawnSync(this.cwd, ['git', ...args]);
+  }
+
+  private log(...params: Parameters<typeof console.log>): void {
+    if (!this.quiet) {
+      console.log(...params);
+    }
   }
 }

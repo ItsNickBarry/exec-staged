@@ -2,12 +2,14 @@ import pkg from '../../package.json';
 import { execStaged } from '../../src/lib/exec_staged.js';
 import { spawnSync } from '../../src/lib/spawn.js';
 import { Stage } from '../../src/lib/stage.js';
-import type { ExitCode } from '../../src/types.js';
+import type { ExitCode, StageOptions } from '../../src/types.js';
 import envPaths from 'env-paths';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { registerExitHandler } from 'on-process-exit';
+
+const TEST_STAGE_OPTIONS: StageOptions = { quiet: true };
 
 export class TestStage extends Stage {
   declare public check: () => void;
@@ -17,6 +19,10 @@ export class TestStage extends Stage {
   declare public revert: () => void;
   declare public clean: () => void;
   declare public git: (args: string[]) => string;
+
+  constructor(cwd: string) {
+    super(cwd, TEST_STAGE_OPTIONS);
+  }
 
   public async readFile(relativePath: string): Promise<string> {
     assert(!path.isAbsolute(relativePath));
@@ -44,7 +50,7 @@ export class TestStage extends Stage {
   }
 
   public async execStaged(tasks: string[]): Promise<ExitCode> {
-    return await execStaged(this.cwd, tasks);
+    return await execStaged(this.cwd, tasks, TEST_STAGE_OPTIONS);
   }
 
   public spawnSync(task: string): string {

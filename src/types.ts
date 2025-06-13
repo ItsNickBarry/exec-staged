@@ -9,3 +9,7 @@ export type Tasks =
 export type ExecStagedConfig = {
   [globPattern: string]: Tasks;
 };
+
+export type StageOptions = {
+  quiet?: boolean;
+};
