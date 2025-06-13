@@ -1,6 +1,8 @@
+import pkg from '../../package.json' with { type: 'json' };
 import type { StageOptions } from '../types.js';
 import { BACKUP_STASH_MESSAGE } from './constants.js';
 import { spawn, spawnSync } from './spawn.js';
+import envPaths from 'env-paths';
 import fs from 'node:fs';
 import path from 'node:path';
 import semver from 'semver';
@@ -9,10 +11,16 @@ export class Stage {
   public readonly cwd: string;
   protected stashed: boolean = false;
   protected quiet: boolean;
+  private debugFile: string;
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
     this.quiet = Boolean(options.quiet);
+    this.debugFile = path.resolve(
+      envPaths(pkg.name).temp,
+      `debug-${new Date().getTime().toString()}.txt`,
+    );
+    fs.mkdirSync(path.dirname(this.debugFile), { recursive: true });
   }
 
   public async exec(tasks: string[]) {
@@ -23,6 +31,7 @@ export class Stage {
       this.merge();
       this.clean();
     } catch (error) {
+      this.debug(error);
       this.revert();
       this.clean();
       throw error;
@@ -209,8 +218,14 @@ export class Stage {
   }
 
   private log(...params: Parameters<typeof console.log>): void {
+    this.debug(...params);
+
     if (!this.quiet) {
       console.log(...params);
     }
+  }
+
+  private debug(...params: Parameters<typeof console.debug>): void {
+    fs.appendFileSync(this.debugFile, params.join('\n') + '\n');
   }
 }
