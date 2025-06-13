@@ -1,5 +1,6 @@
 import nanoSpawn, { SubprocessError } from 'nano-spawn';
 import child_process from 'node:child_process';
+import { registerExitHandler, deregisterExitHandler } from 'on-process-exit';
 import parseArgsStringToArgv from 'string-argv';
 
 /**
@@ -45,6 +46,8 @@ export const spawnSync = (cwd: string, args: string | string[]): string => {
  * This is used to run `exec-staged` tasks.  The `nano-spawn` package is
  * required because it provides the `preferLocal` option.
  *
+ * Child processes are configured to be killed if the main process is stopped.
+ *
  * @param cwd Directory where command should be executed.
  * @param args Command string or array of command tokens.
  * @throws SubprocessError
@@ -58,11 +61,16 @@ export const spawn = async (
     args = parseArgsStringToArgv(args);
   }
 
-  const result = await nanoSpawn(args[0], args.slice(1), {
+  const subprocess = nanoSpawn(args[0], args.slice(1), {
     cwd,
     preferLocal: true,
     stdio: 'inherit',
   });
 
-  return result.stdout;
+  subprocess.nodeChildProcess.then((child) => {
+    const id = registerExitHandler(() => child.kill());
+    subprocess.then(() => deregisterExitHandler(id));
+  });
+
+  return (await subprocess).stdout;
 };
