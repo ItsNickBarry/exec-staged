@@ -1,5 +1,4 @@
 import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
-import { spawn } from '../src/lib/spawn';
 import { TASK_SLEEP } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
