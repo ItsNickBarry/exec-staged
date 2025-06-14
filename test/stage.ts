@@ -2,6 +2,7 @@ import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1 } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
+import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
 
 describe('Stage', () => {
@@ -12,15 +13,32 @@ describe('Stage', () => {
   });
 
   describe('::check', () => {
-    it('returns error status code if backup stash from previous run is present', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
+    // TODO: test git not present
+    // TODO: test git version unsupported
+
+    it('throws if cwd does not exist', async () => {
+      stage.rm('.');
 
       assert.throws(() => stage.check());
     });
 
-    it('returns error status code if not git repository', async () => {
+    it('throws if cwd is not git repository', async () => {
       stage.rm('.git');
+
+      assert.throws(() => stage.check());
+    });
+
+    it('throws if cwd is not root of git repository', async () => {
+      stage.mkdir('testdir');
+
+      stage = new TestStage(path.resolve(stage.cwd, 'testdir'));
+
+      assert.throws(() => stage.check());
+    });
+
+    it('throws if backup stash from previous run is present', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
       assert.throws(() => stage.check());
     });
