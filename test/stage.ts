@@ -212,6 +212,85 @@ describe('Stage', () => {
 
       assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt\n');
     });
+
+    it('throws with in-progress merge and unmerged files', async () => {
+      const theirBranch = 'their-branch';
+      const ourFile = 'current contents';
+      const theirFile = 'incoming contents';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', ourFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      // command throws but leaves the repository in merge state
+      assert.throws(() => stage.git(['merge', theirBranch]));
+
+      assert.deepEqual(stage.readFile('test.txt').trim().split('\n'), [
+        '<<<<<<< HEAD',
+        ourFile,
+        '=======',
+        theirFile,
+        `>>>>>>> ${theirBranch}`,
+      ]);
+
+      const oldStatus = stage.git(['status']);
+      const oldStatusPorcelain = stage.git(['status', '--porcelain']);
+      assert.throws(() => stage.prepare());
+      const newStatus = stage.git(['status']);
+      const newStatusPorcelain = stage.git(['status', '--porcelain']);
+
+      // TODO:
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStatusPorcelain, oldStatusPorcelain);
+    });
+
+    it('does not throw with in-progress merge and no unmerged files', async () => {
+      const theirBranch = 'their-branch';
+      const ourFile = 'current contents';
+      const theirFile = 'incoming contents';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', ourFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      // command throws but leaves the repository in merge state
+      assert.throws(() => stage.git(['merge', theirBranch]));
+
+      assert.deepEqual(stage.readFile('test.txt').trim().split('\n'), [
+        '<<<<<<< HEAD',
+        ourFile,
+        '=======',
+        theirFile,
+        `>>>>>>> ${theirBranch}`,
+      ]);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status']);
+      const oldStatusPorcelain = stage.git(['status', '--porcelain']);
+      assert.doesNotThrow(() => stage.prepare());
+      const newStatus = stage.git(['status']);
+      const newStatusPorcelain = stage.git(['status', '--porcelain']);
+
+      assert.notEqual(newStatus, oldStatus);
+      assert.equal(newStatusPorcelain, oldStatusPorcelain);
+      assert.equal(newStatusPorcelain, 'M  test.txt\n');
+    });
   });
 
   describe('::run', () => {
@@ -374,6 +453,49 @@ describe('Stage', () => {
 
     it('todo');
 
+    it('restores merge status', async () => {
+      const theirBranch = 'their-branch';
+      const ourFile = 'current contents';
+      const theirFile = 'incoming contents';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', ourFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      // command throws but leaves the repository in merge state
+      assert.throws(() => stage.git(['merge', theirBranch]));
+
+      assert.deepEqual(stage.readFile('test.txt').trim().split('\n'), [
+        '<<<<<<< HEAD',
+        ourFile,
+        '=======',
+        theirFile,
+        `>>>>>>> ${theirBranch}`,
+      ]);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status']);
+      const oldStatusPorcelain = stage.git(['status', '--porcelain']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status']);
+      const newStatusPorcelain = stage.git(['status', '--porcelain']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStatusPorcelain, oldStatusPorcelain);
+      assert.equal(newStatusPorcelain, 'M  test.txt\n');
+    });
+
     it('throws if expected backup stash is not found', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
@@ -526,6 +648,49 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
+    });
+
+    it('restores merge status', async () => {
+      const theirBranch = 'their-branch';
+      const ourFile = 'current contents';
+      const theirFile = 'incoming contents';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', ourFile);
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      // command throws but leaves the repository in merge state
+      assert.throws(() => stage.git(['merge', theirBranch]));
+
+      assert.deepEqual(stage.readFile('test.txt').trim().split('\n'), [
+        '<<<<<<< HEAD',
+        ourFile,
+        '=======',
+        theirFile,
+        `>>>>>>> ${theirBranch}`,
+      ]);
+
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+
+      stage.writeFile('test.txt', theirFile);
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status']);
+      const oldStatusPorcelain = stage.git(['status', '--porcelain']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status']);
+      const newStatusPorcelain = stage.git(['status', '--porcelain']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStatusPorcelain, oldStatusPorcelain);
+      assert.equal(newStatusPorcelain, 'M  test.txt\n');
     });
 
     it('drops backup stash', async () => {
