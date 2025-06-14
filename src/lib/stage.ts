@@ -1,5 +1,9 @@
 import type { StageOptions } from '../types.js';
-import { BACKUP_STASH_MESSAGE, stageLifecycleMessages } from './constants.js';
+import {
+  BACKUP_STASH_MESSAGE,
+  MERGE_FILES,
+  stageLifecycleMessages,
+} from './constants.js';
 import { Logger } from './logger.js';
 import { spawn, spawnSync } from './spawn.js';
 import fs from 'node:fs';
@@ -11,9 +15,7 @@ export class Stage {
   protected stashed: boolean = false;
   private logger: Logger;
 
-  private MERGE_HEAD?: Buffer;
-  private MERGE_MODE?: Buffer;
-  private MERGE_MSG?: Buffer;
+  private mergeStatus: { [key in (typeof MERGE_FILES)[number]]?: Buffer } = {};
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
@@ -234,27 +236,24 @@ export class Stage {
 
   private backupMergeStatus() {
     const gitDir = path.resolve(this.cwd, '.git');
-    const mergeHeadFile = path.resolve(gitDir, 'MERGE_HEAD');
-    const mergeModeFile = path.resolve(gitDir, 'MERGE_MODE');
-    const mergeMsgFile = path.resolve(gitDir, 'MERGE_MSG');
 
-    if (fs.existsSync(mergeHeadFile))
-      this.MERGE_HEAD = fs.readFileSync(mergeHeadFile);
-    if (fs.existsSync(mergeModeFile))
-      this.MERGE_MODE = fs.readFileSync(mergeModeFile);
-    if (fs.existsSync(mergeMsgFile))
-      this.MERGE_MSG = fs.readFileSync(mergeMsgFile);
+    for (const mergeFile of MERGE_FILES) {
+      const file = path.resolve(gitDir, mergeFile);
+      if (fs.existsSync(file)) {
+        this.mergeStatus[mergeFile] = fs.readFileSync(file);
+      }
+    }
   }
 
   private restoreMergeStatus() {
     const gitDir = path.resolve(this.cwd, '.git');
 
-    if (this.MERGE_HEAD)
-      fs.writeFileSync(path.resolve(gitDir, 'MERGE_HEAD'), this.MERGE_HEAD);
-    if (this.MERGE_MODE)
-      fs.writeFileSync(path.resolve(gitDir, 'MERGE_MODE'), this.MERGE_MODE);
-    if (this.MERGE_MSG)
-      fs.writeFileSync(path.resolve(gitDir, 'MERGE_MSG'), this.MERGE_MSG);
+    for (const mergeFile of Object.keys(
+      this.mergeStatus,
+    ) as (keyof typeof this.mergeStatus)[]) {
+      const contents = this.mergeStatus[mergeFile]!;
+      fs.writeFileSync(path.resolve(gitDir, mergeFile), contents);
+    }
   }
 
   private findBackupStashIndex(): number {
