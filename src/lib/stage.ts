@@ -59,7 +59,7 @@ export class Stage {
       throw new Error('TODO: error');
     }
 
-    if (gitRootDirectory !== this.cwd) {
+    if (gitRootDirectory.trim() !== this.cwd) {
       this.logger.log('⚠️ Not in git root directory!');
       throw new Error('TODO: error');
     }
