@@ -14,6 +14,10 @@ export class Logger {
       `debug-${new Date().getTime().toString()}.txt`,
     );
     fs.mkdirSync(path.dirname(this.outFile), { recursive: true });
+    fs.appendFileSync(
+      this.outFile,
+      `${pkg.name} log: ${new Date().toLocaleString()}\n`,
+    );
   }
 
   public log(...params: Parameters<typeof console.log>): void {
