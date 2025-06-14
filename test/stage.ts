@@ -19,13 +19,13 @@ describe('Stage', () => {
     it('throws if cwd does not exist', async () => {
       stage.rm('.');
 
-      assert.throws(() => stage.check());
+      assert.throws(() => stage.check(), /cwd does not exist/);
     });
 
     it('throws if cwd is not git repository', async () => {
       stage.rm('.git');
 
-      assert.throws(() => stage.check());
+      assert.throws(() => stage.check(), /cwd is not a git repository/);
     });
 
     it('throws if cwd is not root of git repository', async () => {
@@ -33,14 +33,17 @@ describe('Stage', () => {
 
       stage = new TestStage(path.resolve(stage.cwd, 'testdir'));
 
-      assert.throws(() => stage.check());
+      assert.throws(
+        () => stage.check(),
+        /cwd is not a git repository root directory/,
+      );
     });
 
     it('throws if backup stash from previous run is present', async () => {
       stage.writeFile('test.txt');
       stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
-      assert.throws(() => stage.check());
+      assert.throws(() => stage.check(), /unexpected backup stash/);
     });
   });
 

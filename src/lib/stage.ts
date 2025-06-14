@@ -36,6 +36,11 @@ export class Stage {
     this.logger.log(stageLifecycleMessages.check);
     let version: string | undefined;
 
+    if (!fs.existsSync(this.cwd)) {
+      this.logger.log('⚠️ Directory does not exist!');
+      throw new Error('cwd does not exist');
+    }
+
     try {
       version = this.git(['--version']).match(
         /git version (\d+\.\d+\.\d+)/,
@@ -47,7 +52,7 @@ export class Stage {
 
     if (!version || semver.lte(version, '2.13.0')) {
       this.logger.log('⚠️ Unsupported git version!');
-      throw new Error('TODO: error');
+      throw new Error('unsupported git version');
     }
 
     let gitRootDirectory: string;
@@ -56,12 +61,12 @@ export class Stage {
       gitRootDirectory = this.git(['rev-parse', '--show-toplevel']).trim();
     } catch (error) {
       this.logger.log('⚠️ Not a git repository!');
-      throw new Error('TODO: error');
+      throw new Error('cwd is not a git repository');
     }
 
     if (gitRootDirectory !== this.cwd) {
       this.logger.log('⚠️ Not in git root directory!');
-      throw new Error('TODO: error');
+      throw new Error('cwd is not a git repository root directory');
     }
 
     const list = this.git(['stash', 'list']);
@@ -71,7 +76,7 @@ export class Stage {
       this.logger.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
       );
-      throw new Error('TODO: error');
+      throw new Error('unexpected backup stash');
     }
   }
 
