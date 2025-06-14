@@ -16,7 +16,6 @@ const options = program.opts();
 const args = program.args;
 
 const cwd = path.resolve(options.cwd ?? '');
-console.log(cwd);
 
 const config = await loadConfig(cwd);
 
