@@ -184,6 +184,10 @@ if (process.argv[1] === import.meta.filename) {
     });
 
     describe('TASK_SLEEP', () => {
+      it('does not throw', async () => {
+        assert.doesNotThrow(() => stage.spawnSync(TASK_SLEEP));
+      });
+
       it('sleeps for one second', async () => {
         const startedAt = new Date().getTime();
         stage.spawnSync(TASK_SLEEP);
