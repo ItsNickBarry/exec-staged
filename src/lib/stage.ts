@@ -11,6 +11,10 @@ export class Stage {
   protected stashed: boolean = false;
   private logger: Logger;
 
+  private MERGE_HEAD?: Buffer;
+  private MERGE_MODE?: Buffer;
+  private MERGE_MSG?: Buffer;
+
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
     this.logger = new Logger(options.quiet);
@@ -82,6 +86,14 @@ export class Stage {
 
     // if there are no files in index or working tree, do not attempt to stash
     if (status.length === 0) return;
+
+    try {
+      this.logger.debug('➡️ ➡️ Backing up merge status...');
+      this.backupMergeStatus();
+    } catch (error) {
+      this.logger.log('⚠️ Error backing up merge status!');
+      throw error;
+    }
 
     try {
       this.logger.debug(
@@ -182,6 +194,8 @@ export class Stage {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
     }
+
+    this.restoreMergeStatus();
   }
 
   protected revert() {
@@ -199,6 +213,7 @@ export class Stage {
       this.git(['reset', '--hard', 'HEAD']);
       this.git(['stash', 'apply', '--index', stash]);
       this.git(['stash', 'drop', stash]);
+      this.restoreMergeStatus();
     } catch (error) {
       this.logger.log('⚠️ Failed to restore state from backup stash!');
       throw error;
@@ -215,6 +230,31 @@ export class Stage {
         .join('\n'),
     );
     return output;
+  }
+
+  private backupMergeStatus() {
+    const gitDir = path.resolve(this.cwd, '.git');
+    const mergeHeadFile = path.resolve(gitDir, 'MERGE_HEAD');
+    const mergeModeFile = path.resolve(gitDir, 'MERGE_MODE');
+    const mergeMsgFile = path.resolve(gitDir, 'MERGE_MSG');
+
+    if (fs.existsSync(mergeHeadFile))
+      this.MERGE_HEAD = fs.readFileSync(mergeHeadFile);
+    if (fs.existsSync(mergeModeFile))
+      this.MERGE_MODE = fs.readFileSync(mergeModeFile);
+    if (fs.existsSync(mergeMsgFile))
+      this.MERGE_MSG = fs.readFileSync(mergeMsgFile);
+  }
+
+  private restoreMergeStatus() {
+    const gitDir = path.resolve(this.cwd, '.git');
+
+    if (this.MERGE_HEAD)
+      fs.writeFileSync(path.resolve(gitDir, 'MERGE_HEAD'), this.MERGE_HEAD);
+    if (this.MERGE_MODE)
+      fs.writeFileSync(path.resolve(gitDir, 'MERGE_MODE'), this.MERGE_MODE);
+    if (this.MERGE_MSG)
+      fs.writeFileSync(path.resolve(gitDir, 'MERGE_MSG'), this.MERGE_MSG);
   }
 
   private findBackupStashIndex(): number {
