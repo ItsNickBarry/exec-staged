@@ -1,12 +1,27 @@
 #!/usr/bin/env node
+import pkg from '../../package.json' with { type: 'json' };
 import { loadConfig, parseTasks } from '../lib/config.js';
 import { execStaged } from '../lib/exec_staged.js';
+import { program } from 'commander';
+import path from 'node:path';
 
-const cwd = process.cwd();
+program.name(pkg.name).version(pkg.version).description(pkg.description);
+program.option('--quiet', 'suppress output');
+program.option('--cwd <cwd>', 'directory in which to run');
+program.argument('<tasks...>');
+
+program.parse(process.argv);
+
+const options = program.opts();
+const args = program.args;
+
+const cwd = path.resolve(options.cwd ?? '');
+console.log(cwd);
+
 const config = await loadConfig(cwd);
 
-const configTasks = await parseTasks(Object.values(config));
+const tasks: string[] = args.length
+  ? args
+  : await parseTasks(Object.values(config));
 
-const tasks = process.argv.length > 2 ? process.argv.slice(2) : configTasks;
-
-process.exitCode = await execStaged(cwd, tasks);
+process.exitCode = await execStaged(cwd, tasks, options);
