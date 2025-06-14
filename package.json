@@ -12,7 +12,7 @@
     "hook"
   ],
   "repository": "github:ItsNickBarry/exec-staged",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": "Nick Barry",
   "type": "module",
   "exports": {
