@@ -14,6 +14,7 @@ export class Stage {
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
     this.logger = new Logger(options.quiet);
+    this.logger.debug(`cwd: ${cwd}`);
   }
 
   public async exec(tasks: string[]) {
