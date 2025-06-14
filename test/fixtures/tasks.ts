@@ -2,8 +2,8 @@ import { TestStage } from './test_stage';
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
 
-export const TASK_ASSERT_CHANGES = `bash -c '[ -z "$(git status -z)" ] && exit 1 || exit 0'`;
-export const TASK_ASSERT_NO_CHANGES = `bash -c '[ -z "$(git status -z)" ] && exit 0 || exit 1'`;
+export const TASK_ASSERT_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^..")" ] && exit 1 || exit 0'`;
+export const TASK_ASSERT_NO_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^..")" ] && exit 0 || exit 1'`;
 export const TASK_ASSERT_NO_UNSTAGED_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^.[^ ]")" ] && exit 0 || exit 1'`;
 export const TASK_EXIT_0 = 'bash -c "exit 0"';
 export const TASK_EXIT_1 = 'bash -c "exit 1"';
