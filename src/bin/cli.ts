@@ -8,7 +8,7 @@ import path from 'node:path';
 program.name(pkg.name).version(pkg.version).description(pkg.description);
 program.option('--quiet', 'suppress output');
 program.option('--cwd <cwd>', 'directory in which to run');
-program.argument('<tasks...>');
+program.argument('[tasks...]');
 
 program.parse(process.argv);
 
