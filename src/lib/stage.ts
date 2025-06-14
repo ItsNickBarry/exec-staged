@@ -115,8 +115,6 @@ export class Stage {
       this.logger.log('⚠️ Error creating backup stash!');
       throw error;
     }
-
-    // TODO: restore merge status
   }
 
   protected async run(tasks: string[]) {
