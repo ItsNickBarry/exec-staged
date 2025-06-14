@@ -7,7 +7,7 @@ import path from 'node:path';
 import semver from 'semver';
 
 export class Stage {
-  public readonly cwd: string;
+  protected readonly cwd: string;
   protected stashed: boolean = false;
   private logger: Logger;
 

@@ -12,6 +12,7 @@ import { registerExitHandler } from 'on-process-exit';
 const TEST_STAGE_OPTIONS: StageOptions = { quiet: true };
 
 export class TestStage extends Stage {
+  declare public cwd: string;
   declare public check: () => void;
   declare public prepare: () => void;
   declare public run: (tasks: string[]) => Promise<void>;
