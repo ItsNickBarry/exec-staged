@@ -10,5 +10,4 @@ export const stageLifecycleMessages = {
   run: `${PREFIX}Running tasks...`,
   merge: `${PREFIX}Merging new changes with saved state...`,
   revert: `${PREFIX}Reverting to saved state...`,
-  clean: `${PREFIX}Dropping backup stash...`,
 };

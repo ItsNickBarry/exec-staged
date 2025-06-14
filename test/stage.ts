@@ -390,14 +390,14 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'old contents');
     });
 
-    it('does not drop backup stash', async () => {
+    it('drops backup stash', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
       stage.prepare();
       stage.merge();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
   });
 
@@ -528,55 +528,12 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('does not drop backup stash', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
-
-      stage.prepare();
-      stage.revert();
-
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
-    });
-
-    it('throws if expected backup stash is not found', async () => {
-      stage.writeFile('test.txt', 'old contents');
-      stage.git(['add', 'test.txt']);
-      stage.writeFile('test.txt', 'new contents');
-
-      stage.prepare();
-      stage.git(['stash', 'clear']);
-
-      const oldStatus = stage.git(['status', '-z']);
-      assert.throws(() => stage.revert(), /missing backup stash/);
-      const newStatus = stage.git(['status', '-z']);
-
-      assert.equal(newStatus, oldStatus);
-      assert.equal(stage.readFile('test.txt'), 'old contents');
-    });
-  });
-
-  describe('::clean', () => {
-    it('does nothing if no backup stash exists', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
-      stage.git(['stash', '-m', 'not a backup stash']);
-
-      const oldStatus = stage.git(['status', '-z']);
-      const oldStashList = stage.git(['stash', 'list']);
-      stage.clean();
-      const newStatus = stage.git(['status', '-z']);
-      const newStashList = stage.git(['stash', 'list']);
-
-      assert.equal(newStatus, oldStatus);
-      assert.equal(newStashList, oldStashList);
-    });
-
     it('drops backup stash', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
       stage.prepare();
-      stage.clean();
+      stage.revert();
 
       assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
@@ -590,7 +547,7 @@ describe('Stage', () => {
       stage.git(['stash', 'clear']);
 
       const oldStatus = stage.git(['status', '-z']);
-      assert.throws(() => stage.clean(), /missing backup stash/);
+      assert.throws(() => stage.revert(), /missing backup stash/);
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);

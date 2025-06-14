@@ -23,11 +23,9 @@ export class Stage {
       this.prepare();
       await this.run(tasks);
       this.merge();
-      this.clean();
     } catch (error) {
       this.logger.debug(error);
       this.revert();
-      this.clean();
       throw error;
     }
   }
@@ -179,6 +177,7 @@ export class Stage {
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
       this.git(['stash', 'apply', '--index', stash!]);
+      this.git(['stash', 'drop', stash!]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
@@ -199,21 +198,9 @@ export class Stage {
       this.git(['add', '-A']);
       this.git(['reset', '--hard', 'HEAD']);
       this.git(['stash', 'apply', '--index', stash]);
+      this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Failed to restore state from backup stash!');
-      throw error;
-    }
-  }
-
-  protected clean() {
-    this.logger.log(stageLifecycleMessages.clean);
-
-    if (!this.stashed) return;
-
-    try {
-      this.git(['stash', 'drop', this.findBackupStash()]);
-    } catch (error) {
-      this.logger.log('⚠️ Failed to drop backup stash!');
       throw error;
     }
   }

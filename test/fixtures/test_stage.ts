@@ -18,7 +18,6 @@ export class TestStage extends Stage {
   declare public run: (tasks: string[]) => Promise<void>;
   declare public merge: () => void;
   declare public revert: () => void;
-  declare public clean: () => void;
   declare public git: (args: string[]) => string;
 
   constructor(cwd: string) {
