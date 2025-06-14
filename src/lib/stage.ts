@@ -14,7 +14,6 @@ export class Stage {
   protected readonly cwd: string;
   protected stashed: boolean = false;
   private logger: Logger;
-
   private mergeStatus: { [key in (typeof MERGE_FILES)[number]]?: Buffer } = {};
 
   constructor(cwd: string, options: StageOptions = {}) {
