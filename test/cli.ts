@@ -16,7 +16,7 @@ describe('CLI', () => {
   it('returns exit code 0 on success', async () => {
     const child = child_process.fork(
       path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      [TASK_EXIT_0],
+      ['--quiet', TASK_EXIT_0],
       { cwd: stage.cwd },
     );
 
@@ -32,7 +32,7 @@ describe('CLI', () => {
   it('returns exit code 1 on failure', async () => {
     const child = child_process.fork(
       path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      [TASK_EXIT_1],
+      ['--quiet', TASK_EXIT_1],
       { cwd: stage.cwd },
     );
 
@@ -52,7 +52,7 @@ describe('CLI', () => {
 
     const child = child_process.fork(
       path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      [TASK_SLEEP],
+      ['--quiet', TASK_SLEEP],
       { cwd: stage.cwd },
     );
 
