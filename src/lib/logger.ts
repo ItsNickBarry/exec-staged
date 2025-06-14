@@ -11,7 +11,7 @@ export class Logger {
     this.quiet = quiet;
     this.outFile = path.resolve(
       envPaths(pkg.name).temp,
-      `debug-${new Date().getTime().toString()}.txt`,
+      `debug-${new Date().getTime().toString()}-${crypto.randomUUID()}.txt`,
     );
     fs.mkdirSync(path.dirname(this.outFile), { recursive: true });
     this.debug(`${pkg.name} log: ${new Date().toLocaleString()}`);
