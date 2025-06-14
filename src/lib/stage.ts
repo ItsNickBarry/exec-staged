@@ -53,13 +53,13 @@ export class Stage {
     let gitRootDirectory: string;
 
     try {
-      gitRootDirectory = this.git(['rev-parse', '--show-toplevel']);
+      gitRootDirectory = this.git(['rev-parse', '--show-toplevel']).trim();
     } catch (error) {
       this.logger.log('⚠️ Not a git repository!');
       throw new Error('TODO: error');
     }
 
-    if (gitRootDirectory.trim() !== this.cwd) {
+    if (gitRootDirectory !== this.cwd) {
       this.logger.log('⚠️ Not in git root directory!');
       throw new Error('TODO: error');
     }
