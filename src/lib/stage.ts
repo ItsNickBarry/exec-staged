@@ -69,9 +69,7 @@ export class Stage {
       throw new Error('cwd is not a git repository root directory');
     }
 
-    const list = this.git(['stash', 'list']);
-
-    if (list.includes(BACKUP_STASH_MESSAGE)) {
+    if (this.findBackupStashIndex() !== -1) {
       this.logger.log('⚠️ Found unexpected backup stash!');
       this.logger.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
@@ -232,19 +230,19 @@ export class Stage {
     return output;
   }
 
+  private findBackupStashIndex(): number {
+    return this.git(['stash', 'list'])
+      .split('\n')
+      .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
+  }
+
   private findBackupStash(): string {
-    if (this.stashed) {
-      const index = this.git(['stash', 'list'])
-        .split('\n')
-        .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
+    const index = this.findBackupStashIndex();
 
-      if (index === -1) {
-        throw new Error('TODO: error');
-      }
-
-      return `stash@{${index}}`;
-    } else {
-      return '';
+    if (index === -1) {
+      throw new Error('missing backup stash');
     }
+
+    return `stash@{${index}}`;
   }
 }
