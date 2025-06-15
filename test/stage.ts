@@ -453,6 +453,22 @@ describe('Stage', () => {
 
     it('todo');
 
+    it('merges unstaged deletions', async () => {
+      stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.txt');
+
+      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt\n');
+
+      stage.prepare();
+      assert.equal(stage.readFile('test.txt'), 'old contents');
+      stage.writeFile('test.txt', 'new contents');
+      stage.merge();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'MD test.txt\n');
+    });
+
     it('restores merge status', async () => {
       const theirBranch = 'their-branch';
       const ourFile = 'current contents';
