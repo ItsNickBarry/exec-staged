@@ -156,8 +156,6 @@ export class Stage {
   protected merge() {
     this.logger.log(stageLifecycleMessages.merge);
 
-    let stash: string | undefined;
-
     // files changed by tasks
     const changedFiles = this.git(['status', '--porcelain'])
       .split('\n')
@@ -178,11 +176,11 @@ export class Stage {
 
     if (!this.stashed) return;
 
+    // attempt to retrieve the stash before running any damaging operations
+    const stash = this.findBackupStash();
+
     try {
       this.logger.debug('➡️ ➡️ Cleaning up redundant files in index...');
-
-      // attempt to retrieve the stash before running any damaging operations
-      stash = this.findBackupStash();
 
       if (unchangedFiles.length) {
         this.git(['reset', '--', ...unchangedFiles.map((f) => f.slice(3))]);
@@ -208,8 +206,8 @@ export class Stage {
 
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
-      this.git(['stash', 'apply', '--index', stash!]);
-      this.git(['stash', 'drop', stash!]);
+      this.git(['stash', 'apply', '--index', stash]);
+      this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
