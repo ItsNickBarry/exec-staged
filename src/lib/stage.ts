@@ -26,11 +26,23 @@ export class Stage {
     try {
       this.check();
       this.prepare();
+    } catch (error) {
+      this.logger.debug(error);
+      throw error;
+    }
+
+    try {
       await this.run(tasks);
       this.merge();
     } catch (error) {
       this.logger.debug(error);
-      this.revert();
+
+      try {
+        this.revert();
+      } catch (error) {
+        this.logger.debug(error);
+      }
+
       throw error;
     }
   }
