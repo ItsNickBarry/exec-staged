@@ -156,18 +156,19 @@ export class Stage {
   protected merge() {
     this.logger.log(stageLifecycleMessages.merge);
 
-    // files changed by tasks
     const changedFiles = this.git(['status', '--porcelain'])
       .split('\n')
-      .filter((f) => f.match(/^.[^ ]/));
+      .filter((f) => f.match(/^.[^ ]/))
+      .map((f) => f.slice(3));
     const unchangedFiles = this.git(['status', '--porcelain'])
       .split('\n')
-      .filter((f) => f.match(/^. /));
+      .filter((f) => f.match(/^. /))
+      .map((f) => f.slice(3));
 
     if (changedFiles.length) {
       try {
         this.logger.debug('➡️ ➡️ Adding changes made by tasks...');
-        this.git(['add', '--', ...changedFiles.map((f) => f.slice(3))]);
+        this.git(['add', '-A']);
       } catch (error) {
         this.logger.log('⚠️ Error adding new changes!');
         throw error;
@@ -179,29 +180,17 @@ export class Stage {
     // attempt to retrieve the stash before running any damaging operations
     const stash = this.findBackupStash();
 
-    try {
-      this.logger.debug('➡️ ➡️ Cleaning up redundant files in index...');
+    if (unchangedFiles.length) {
+      try {
+        this.logger.debug('➡️ ➡️ Cleaning up redundant files in index...');
 
-      if (unchangedFiles.length) {
-        this.git(['reset', '--', ...unchangedFiles.map((f) => f.slice(3))]);
-
-        const tracked = unchangedFiles.filter((f) => f.match(/^[^A]/));
-
-        if (tracked.length) {
-          this.git(['restore', ...tracked.map((f) => f.slice(3))]);
-        }
-
-        const untracked = unchangedFiles.filter((f) => f.match(/^[A]/));
-
-        if (untracked.length) {
-          untracked.forEach((f) =>
-            fs.rmSync(path.resolve(this.cwd, f.slice(3))),
-          );
-        }
+        this.git(['reset', '--', ...unchangedFiles]);
+        this.git(['checkout-index', '--all', '--force']);
+        this.git(['clean', '--force', '--', ...unchangedFiles]);
+      } catch (error) {
+        this.logger.log('⚠️ Error cleaning up redundant files!');
+        throw error;
       }
-    } catch (error) {
-      this.logger.log('⚠️ Error cleaning up redundant files!');
-      throw error;
     }
 
     try {
