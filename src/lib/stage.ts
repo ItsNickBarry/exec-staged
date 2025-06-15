@@ -158,15 +158,31 @@ export class Stage {
 
     let stash: string | undefined;
 
-    if (this.stashed) {
+    // files changed by tasks
+    const changedFiles = this.git(['status', '--porcelain'])
+      .split('\n')
+      .filter((f) => f.match(/^.[^ ]/));
+    const unchangedFiles = this.git(['status', '--porcelain'])
+      .split('\n')
+      .filter((f) => f.match(/^. /));
+
+    if (changedFiles.length) {
+      try {
+        this.logger.debug('➡️ ➡️ Adding changes made by tasks...');
+        this.git(['add', '--', ...changedFiles.map((f) => f.slice(3))]);
+      } catch (error) {
+        this.logger.log('⚠️ Error adding new changes!');
+        throw error;
+      }
+    }
+
+    if (!this.stashed) return;
+
+    try {
       this.logger.debug('➡️ ➡️ Cleaning up redundant files in index...');
 
       // attempt to retrieve the stash before running any damaging operations
       stash = this.findBackupStash();
-
-      const unchangedFiles = this.git(['status', '--porcelain'])
-        .split('\n')
-        .filter((f) => f.match(/^. /));
 
       if (unchangedFiles.length) {
         this.git(['reset', '--', ...unchangedFiles.map((f) => f.slice(3))]);
@@ -185,17 +201,10 @@ export class Stage {
           );
         }
       }
-    }
-
-    try {
-      this.logger.debug('➡️ ➡️ Adding changes made by tasks...');
-      this.git(['add', '-A']);
     } catch (error) {
-      this.logger.log('⚠️ Error adding new changes!');
+      this.logger.log('⚠️ Error cleaning up redundant files!');
       throw error;
     }
-
-    if (!this.stashed) return;
 
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
