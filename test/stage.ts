@@ -304,7 +304,7 @@ describe('Stage', () => {
   });
 
   describe('::merge', () => {
-    it('does nothing if no backup stash exists and no files were modified by tasks', async () => {
+    it('does nothing if no backup stash exists and no changes were made by tasks', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['stash', '-m', 'not a backup stash']);
@@ -319,7 +319,7 @@ describe('Stage', () => {
       assert.equal(newStashList, oldStashList);
     });
 
-    it('adds changes made by tasks', async () => {
+    it('adds task modifications to index', async () => {
       stage.writeFile('test.txt', 'old content');
       stage.git(['add', 'test.txt']);
 
@@ -332,7 +332,7 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'new content');
     });
 
-    it('adds new files created by tasks', async () => {
+    it('adds task additions to index', async () => {
       // pretend that this was done by a task
       stage.writeFile('test.txt', 'new content');
 
@@ -342,7 +342,7 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'new content');
     });
 
-    it('adds files deleted by tasks', async () => {
+    it('adds task deletions to index', async () => {
       stage.writeFile('test.txt', 'old content');
       stage.git(['add', 'test.txt']);
 
@@ -354,7 +354,7 @@ describe('Stage', () => {
       assert.equal(stage.git(['status', '--porcelain']), '');
     });
 
-    it('restores stashed new files in working tree', async () => {
+    it('restores unstaged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
 
@@ -366,7 +366,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('maintains stashed new files in index', async () => {
+    it('maintains staged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
       stage.git(['add', 'test.txt', 'subdirectory/test.txt']);
@@ -379,7 +379,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('restores stashed unstaged changes in working tree', async () => {
+    it('restores unstaged modifications', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -393,7 +393,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('maintains stashed staged changes in index', async () => {
+    it('maintains staged modifications', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -408,7 +408,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('restores stashed changes to partially staged files in index and working tree', async () => {
+    it('restores unstaged modifications to staged files', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'new contents');
@@ -422,7 +422,7 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'new contents');
     });
 
-    it('restores stashed unstaged deleted files in working tree', async () => {
+    it('restores unstaged deletions', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -436,7 +436,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('maintains stashed staged deleted files in index', async () => {
+    it('maintains staged deletions', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
