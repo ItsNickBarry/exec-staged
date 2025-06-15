@@ -14,8 +14,9 @@ export class Stage {
   protected readonly cwd: string;
   protected stashed: boolean = false;
   private readonly logger: Logger;
+  private readonly status: { [file: string]: string } = {};
   private readonly mergeStatus: {
-    [key in (typeof MERGE_FILES)[number]]?: Buffer;
+    [file in (typeof MERGE_FILES)[number]]?: Buffer;
   } = {};
 
   constructor(cwd: string, options: StageOptions = {}) {
@@ -97,10 +98,14 @@ export class Stage {
 
   protected prepare() {
     this.logger.log(stageLifecycleMessages.prepare);
-    const status = this.git(['status', '-z']);
+
+    this.git(['status', '--porcelain'])
+      .split('\n')
+      .filter((f) => f.length)
+      .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
 
     // if there are no files in index or working tree, do not attempt to stash
-    if (status.length === 0) return;
+    if (Object.keys(this.status).length === 0) return;
 
     try {
       this.logger.debug('➡️ ➡️ Backing up merge status...');
