@@ -524,13 +524,26 @@ describe('Stage', () => {
   });
 
   describe('::revert', () => {
-    it('does nothing if no backup stash exists', async () => {
+    it('does nothing if no backup stash exists and no files are changed by tasks', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['stash', '-m', 'not a backup stash']);
 
       const oldStatus = stage.git(['status', '-z']);
       const oldStashList = stage.git(['stash', 'list']);
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+      const newStashList = stage.git(['stash', 'list']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newStashList, oldStashList);
+    });
+
+    it('deletes changes made by tasks', async () => {
+      const oldStatus = stage.git(['status', '-z']);
+      const oldStashList = stage.git(['stash', 'list']);
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
       stage.revert();
       const newStatus = stage.git(['status', '-z']);
       const newStashList = stage.git(['stash', 'list']);

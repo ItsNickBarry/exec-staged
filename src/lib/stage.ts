@@ -208,18 +208,30 @@ export class Stage {
   protected revert() {
     this.logger.log(stageLifecycleMessages.revert);
 
+    let stash: string | undefined;
+
+    if (this.stashed) {
+      // attempt to retrieve the stash before running any damaging operations
+      stash = this.findBackupStash();
+    }
+
+    try {
+      this.logger.debug('➡️ ➡️ Reverting changes made by tasks...');
+
+      this.git(['add', '-A']);
+      this.git(['reset', '--hard', 'HEAD']);
+    } catch (error) {
+      this.logger.log('⚠️ Failed to revert changes made by tasks!');
+      throw error;
+    }
+
     if (!this.stashed) return;
 
     try {
       this.logger.debug('➡️ ➡️ Restoring state from backup stash...');
 
-      // attempt to retrieve the stash before running any damaging operations
-      const stash = this.findBackupStash();
-
-      this.git(['add', '-A']);
-      this.git(['reset', '--hard', 'HEAD']);
-      this.git(['stash', 'apply', '--index', stash]);
-      this.git(['stash', 'drop', stash]);
+      this.git(['stash', 'apply', '--index', stash!]);
+      this.git(['stash', 'drop', stash!]);
       this.restoreMergeStatus();
     } catch (error) {
       this.logger.log('⚠️ Failed to restore state from backup stash!');
