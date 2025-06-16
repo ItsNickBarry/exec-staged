@@ -154,11 +154,11 @@ describe('Stage', () => {
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'new contents');
 
-      assert.equal(stage.git(['status', '--porcelain']), 'AM test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'AM test.txt');
 
       stage.prepare();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt');
     });
 
     it('hides unstaged deleted files in working tree (restores them)', async () => {
@@ -167,7 +167,7 @@ describe('Stage', () => {
       stage.git(['commit', '-m', 'add file']);
       stage.rm('test.txt');
 
-      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt');
 
       stage.prepare();
 
@@ -178,11 +178,11 @@ describe('Stage', () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt');
 
       stage.prepare();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt');
     });
 
     it('does not hide staged changes in index', async () => {
@@ -192,11 +192,11 @@ describe('Stage', () => {
       stage.writeFile('test.txt', 'new contents');
       stage.git(['add', 'test.txt']);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt');
 
       stage.prepare();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'M  test.txt');
     });
 
     it('does not hide staged deleted files in index', async () => {
@@ -206,11 +206,11 @@ describe('Stage', () => {
       stage.rm('test.txt');
       stage.git(['add', 'test.txt']);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
 
       stage.prepare();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
     });
 
     it('throws with in-progress merge and unmerged files', async () => {
@@ -276,7 +276,7 @@ describe('Stage', () => {
         `>>>>>>> ${theirBranch}`,
       ]);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt');
 
       stage.writeFile('test.txt', theirFile);
       stage.git(['add', 'test.txt']);
@@ -289,7 +289,7 @@ describe('Stage', () => {
 
       assert.notEqual(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
-      assert.equal(newStatusPorcelain, 'M  test.txt\n');
+      assert.equal(newStatusPorcelain, 'M  test.txt');
     });
   });
 
@@ -328,7 +328,7 @@ describe('Stage', () => {
 
       stage.merge();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt');
       assert.equal(stage.readFile('test.txt'), 'new content');
     });
 
@@ -338,7 +338,7 @@ describe('Stage', () => {
 
       stage.merge();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'A  test.txt');
       assert.equal(stage.readFile('test.txt'), 'new content');
     });
 
@@ -459,14 +459,14 @@ describe('Stage', () => {
       stage.git(['commit', '-m', 'add file']);
       stage.rm('test.txt');
 
-      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), ' D test.txt');
 
       stage.prepare();
       assert.equal(stage.readFile('test.txt'), 'old contents');
       stage.writeFile('test.txt', 'new contents');
       stage.merge();
 
-      assert.equal(stage.git(['status', '--porcelain']), 'MD test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'MD test.txt');
     });
 
     it('restores merge status', async () => {
@@ -495,7 +495,7 @@ describe('Stage', () => {
         `>>>>>>> ${theirBranch}`,
       ]);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt');
 
       stage.writeFile('test.txt', theirFile);
       stage.git(['add', 'test.txt']);
@@ -509,7 +509,7 @@ describe('Stage', () => {
 
       assert.equal(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
-      assert.equal(newStatusPorcelain, 'M  test.txt\n');
+      assert.equal(newStatusPorcelain, 'M  test.txt');
     });
 
     it('throws if expected backup stash is not found', async () => {
@@ -705,7 +705,7 @@ describe('Stage', () => {
         `>>>>>>> ${theirBranch}`,
       ]);
 
-      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt\n');
+      assert.equal(stage.git(['status', '--porcelain']), 'AA test.txt');
 
       stage.writeFile('test.txt', theirFile);
       stage.git(['add', 'test.txt']);
@@ -719,7 +719,7 @@ describe('Stage', () => {
 
       assert.equal(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
-      assert.equal(newStatusPorcelain, 'M  test.txt\n');
+      assert.equal(newStatusPorcelain, 'M  test.txt');
     });
 
     it('drops backup stash', async () => {

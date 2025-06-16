@@ -1,77 +1,50 @@
-import nanoSpawn, { SubprocessError } from 'nano-spawn';
-import child_process from 'node:child_process';
+import { execa, execaSync } from 'execa';
 import { registerExitHandler, deregisterExitHandler } from 'on-process-exit';
 import parseArgsStringToArgv from 'string-argv';
 
 /**
- * Spawn a child process synchronously.
+ * Spawn a child process synchronously using the `execa` package.
  * This is used to run `git` commands.  A synchronous API is required because
  * cleanup operations may be run via `on-process-exit`.
  *
  * @param cwd Directory where command should be executed.
  * @param args Command string or array of command tokens.
- * @throws SubprocessError
- * @returns The stdout of the spawned process.
+ * @throws ExecaSyncError
+ * @returns Execa `SyncResult`.
  */
-export const spawnSync = (cwd: string, args: string | string[]): string => {
+export const spawnSync = (cwd: string, args: string | string[]) => {
   if (typeof args === 'string') {
     args = parseArgsStringToArgv(args);
   }
 
-  const result = child_process.spawnSync(args[0], args.slice(1), {
-    cwd,
-    encoding: 'utf-8',
-  });
-
-  const { status, signal, stdout } = result;
-
-  // throw failure as SubprocessError to match the behavior of nano-spawn
-
-  if (signal) {
-    throw new SubprocessError(
-      `Command was terminated with ${signal}: ${args.join(' ')}`,
-    );
-  }
-
-  if (status) {
-    throw new SubprocessError(
-      `Command failed with exit code ${status}: ${args.join(' ')}`,
-    );
-  }
-
-  return stdout;
+  return execaSync({ cwd })(args[0], args.slice(1));
 };
 
 /**
- * Spawn a child process asynchronously using `nano-spawn`.
- * This is used to run `exec-staged` tasks.  The `nano-spawn` package is
+ * Spawn a child process asynchronously using the `execa` package.
+ * This is used to run `exec-staged` tasks.  The `execa` package is
  * required because it provides the `preferLocal` option.
  *
  * Child processes are configured to be killed if the main process is stopped.
  *
  * @param cwd Directory where command should be executed.
  * @param args Command string or array of command tokens.
- * @throws SubprocessError
- * @returns The stdout of the spawned process.
+ * @throws ExecaError
+ * @returns Execa `Result` promise.
  */
-export const spawn = async (
-  cwd: string,
-  args: string | string[],
-): Promise<string> => {
+export const spawn = async (cwd: string, args: string | string[]) => {
   if (typeof args === 'string') {
     args = parseArgsStringToArgv(args);
   }
 
-  const subprocess = nanoSpawn(args[0], args.slice(1), {
+  const subprocess = execa({
     cwd,
     preferLocal: true,
-    stdio: 'inherit',
-  });
+    stdout: ['pipe', 'inherit'],
+  })(args[0], args.slice(1));
 
-  subprocess.nodeChildProcess.then((child) => {
-    const id = registerExitHandler(() => child.kill());
-    child.once('close', () => deregisterExitHandler(id));
-  });
+  const id = registerExitHandler(() => subprocess.kill());
+  subprocess.once('close', () => deregisterExitHandler(id));
 
-  return (await subprocess).stdout;
+  return subprocess;
 };

@@ -146,9 +146,11 @@ export class Stage {
         this.logger.log(
           `➡️ Running task ${i + 1} of ${tasks.length}: \`${task}\`...`,
         );
-        const output = await spawn(this.cwd, task);
+
+        const { stdout } = await spawn(this.cwd, task);
+
         this.logger.debug(
-          output
+          stdout
             .split('\n')
             .map((line) => `> ${line}`)
             .join('\n'),
@@ -248,14 +250,17 @@ export class Stage {
 
   protected git(args: string[]): string {
     this.logger.debug(`git: ${args.map((arg) => `[${arg}]`).join(' ')}`);
-    const output = spawnSync(this.cwd, ['git', ...args]);
+
+    const { stdout } = spawnSync(this.cwd, ['git', ...args]);
+
     this.logger.debug(
-      output
+      stdout
         .split('\n')
         .map((line) => `> ${line}`)
         .join('\n'),
     );
-    return output;
+
+    return stdout;
   }
 
   private backupMergeStatus() {
