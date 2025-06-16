@@ -149,12 +149,7 @@ export class Stage {
 
         const { stdout } = await spawn(this.cwd, task);
 
-        this.logger.debug(
-          stdout
-            .split('\n')
-            .map((line) => `> ${line}`)
-            .join('\n'),
-        );
+        this.logger.debug(stdout.replaceAll(/^/gm, '> '));
       } catch (error) {
         this.logger.log(`⚠️ Error running task: \`${task}\`!`);
         throw error;
@@ -253,12 +248,7 @@ export class Stage {
 
     const { stdout } = spawnSync(this.cwd, ['git', ...args]);
 
-    this.logger.debug(
-      stdout
-        .split('\n')
-        .map((line) => `> ${line}`)
-        .join('\n'),
-    );
+    this.logger.debug(stdout.replaceAll(/^/gm, '> '));
 
     return stdout;
   }
