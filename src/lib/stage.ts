@@ -2,6 +2,7 @@ import type { StageOptions } from '../types.js';
 import {
   BACKUP_STASH_MESSAGE,
   MERGE_FILES,
+  STAGED_CHANGES_COMMIT_MESSAGE,
   stageLifecycleMessages,
 } from './constants.js';
 import { Logger } from './logger.js';
@@ -108,6 +109,41 @@ export class Stage {
     if (Object.keys(this.status).length === 0) return;
 
     try {
+      this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
+
+      const unstagedAdditions = Object.entries(this.status)
+        .filter(([, s]) => s.match(/^\?\?/))
+        .map(([f]) => f);
+
+      if (unstagedAdditions.length) {
+        this.git(['add', '--intent-to-add', '--', ...unstagedAdditions]);
+      }
+
+      this.git([
+        'diff',
+        '--binary',
+        '--default-prefix',
+        // skip deleted files because patch doesn't apply if they're modified
+        '--diff-filter=d',
+        '--no-color',
+        '--no-ext-diff',
+        '--no-rename-empty',
+        '--patch',
+        '--submodule=short',
+        '--unified=0',
+        '--output',
+        path.resolve(this.cwd, '.git', 'patch.diff'),
+      ]);
+
+      if (unstagedAdditions.length) {
+        this.git(['reset', '--', ...unstagedAdditions]);
+      }
+    } catch (error) {
+      this.logger.log('⚠️ Error creating patch of unstaged changes!');
+      throw error;
+    }
+
+    try {
       this.logger.debug('➡️ ➡️ Backing up merge status...');
       this.backupMergeStatus();
     } catch (error) {
@@ -160,23 +196,12 @@ export class Stage {
   protected merge() {
     this.logger.log(stageLifecycleMessages.merge);
 
-    const changedFiles = this.git(['status', '--porcelain'])
-      .split('\n')
-      .filter((f) => f.match(/^.[^ ]/))
-      .map((f) => f.slice(3));
-    const unchangedFiles = this.git(['status', '--porcelain'])
-      .split('\n')
-      .filter((f) => f.match(/^. /))
-      .map((f) => f.slice(3));
-
-    if (changedFiles.length) {
-      try {
-        this.logger.debug('➡️ ➡️ Adding changes made by tasks...');
-        this.git(['add', '-A']);
-      } catch (error) {
-        this.logger.log('⚠️ Error adding new changes!');
-        throw error;
-      }
+    try {
+      this.logger.debug('➡️ ➡️ Adding changes made by tasks...');
+      this.git(['add', '-A']);
+    } catch (error) {
+      this.logger.log('⚠️ Error adding new changes!');
+      throw error;
     }
 
     if (!this.stashed) return;
@@ -184,22 +209,46 @@ export class Stage {
     // attempt to retrieve the stash before running any damaging operations
     const stash = this.findBackupStash();
 
-    if (unchangedFiles.length) {
-      try {
-        this.logger.debug('➡️ ➡️ Cleaning up redundant files in index...');
-
-        this.git(['reset', '--', ...unchangedFiles]);
-        this.git(['checkout-index', '--all', '--force']);
-        this.git(['clean', '--force', '--', ...unchangedFiles]);
-      } catch (error) {
-        this.logger.log('⚠️ Error cleaning up redundant files!');
-        throw error;
-      }
-    }
-
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
-      this.git(['stash', 'apply', '--index', stash]);
+
+      // commit staged changes to keep them separate from unstaged changes in
+      // patch, because `--3-way` adds unstaged changes to the index
+      this.git([
+        'commit',
+        '--allow-empty',
+        '--no-verify',
+        '-m',
+        STAGED_CHANGES_COMMIT_MESSAGE,
+      ]);
+
+      // apply patch containing unstaged changes
+      this.git([
+        'apply',
+        '--allow-empty',
+        '--recount',
+        '--unidiff-zero',
+        '--whitespace=nowarn',
+        '--3way',
+        path.resolve(this.cwd, '.git', 'patch.diff'),
+      ]);
+
+      // unstaged deletions are not included in the patch and must be handled
+      // separately because the patch cannot be applied if such files are
+      // modified by tasks
+      Object.entries(this.status)
+        .filter(([, s]) => s.match(/^.D/))
+        .map(([f]) => f)
+        .forEach((f) => fs.rmSync(path.resolve(this.cwd, f)));
+
+      // make sure all restored unstaged changes are kept out of the index
+      this.git(['reset']);
+
+      // undo temporary commit while keeping its changes in the index
+      this.git(['reset', '--soft', 'HEAD~1']);
+
+      // clean up
+      fs.rmSync(path.resolve(this.cwd, '.git', 'patch.diff'));
       this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
