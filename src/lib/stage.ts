@@ -20,11 +20,13 @@ export class Stage {
     [file in (typeof MERGE_FILES)[number]]?: Buffer;
   } = {};
   private head?: string;
+  private readonly patchPath: string;
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
     this.logger = new Logger(options.quiet);
     this.logger.debug(`cwd: ${cwd}`);
+    this.patchPath = path.resolve(this.cwd, '.git', 'patch.diff');
   }
 
   public async exec(tasks: string[]) {
@@ -135,7 +137,7 @@ export class Stage {
         '--submodule=short',
         '--unified=0',
         '--output',
-        path.resolve(this.cwd, '.git', 'patch.diff'),
+        this.patchPath,
       ]);
 
       if (unstagedAdditions.length) {
@@ -233,7 +235,7 @@ export class Stage {
         '--unidiff-zero',
         '--whitespace=nowarn',
         '--3way',
-        path.resolve(this.cwd, '.git', 'patch.diff'),
+        this.patchPath,
       ]);
 
       // unstaged deletions are not included in the patch and must be handled
@@ -251,7 +253,7 @@ export class Stage {
       this.git(['reset', '--soft', this.head!]);
 
       // clean up
-      fs.rmSync(path.resolve(this.cwd, '.git', 'patch.diff'));
+      fs.rmSync(this.patchPath);
       this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
