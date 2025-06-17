@@ -19,6 +19,7 @@ export class Stage {
   private readonly mergeStatus: {
     [file in (typeof MERGE_FILES)[number]]?: Buffer;
   } = {};
+  private head?: string;
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
@@ -99,6 +100,8 @@ export class Stage {
 
   protected prepare() {
     this.logger.log(stageLifecycleMessages.prepare);
+
+    this.head = this.git(['rev-parse', 'HEAD']);
 
     this.git(['status', '--porcelain'])
       .split('\n')
@@ -245,7 +248,7 @@ export class Stage {
       this.git(['reset']);
 
       // undo temporary commit while keeping its changes in the index
-      this.git(['reset', '--soft', 'HEAD~1']);
+      this.git(['reset', '--soft', this.head!]);
 
       // clean up
       fs.rmSync(path.resolve(this.cwd, '.git', 'patch.diff'));
@@ -272,7 +275,7 @@ export class Stage {
       this.logger.debug('➡️ ➡️ Reverting changes made by tasks...');
 
       this.git(['add', '-A']);
-      this.git(['reset', '--hard', 'HEAD']);
+      this.git(['reset', '--hard', this.head!]);
     } catch (error) {
       this.logger.log('⚠️ Failed to revert changes made by tasks!');
       throw error;

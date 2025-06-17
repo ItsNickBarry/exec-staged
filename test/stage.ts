@@ -305,6 +305,8 @@ describe('Stage', () => {
 
   describe('::merge', () => {
     it('does nothing if no backup stash exists and no changes were made by tasks', async () => {
+      stage.prepare();
+
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['stash', '-m', 'not a backup stash']);
@@ -541,6 +543,8 @@ describe('Stage', () => {
 
   describe('::revert', () => {
     it('does nothing if no backup stash exists and no files are changed by tasks', async () => {
+      stage.prepare();
+
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
       stage.git(['stash', '-m', 'not a backup stash']);
@@ -556,6 +560,8 @@ describe('Stage', () => {
     });
 
     it('deletes changes made by tasks', async () => {
+      stage.prepare();
+
       const oldStatus = stage.git(['status', '-z']);
       const oldStashList = stage.git(['stash', 'list']);
       stage.writeFile('test.txt');
