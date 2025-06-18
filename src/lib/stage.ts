@@ -98,6 +98,14 @@ export class Stage {
       );
       throw new Error('unexpected backup stash');
     }
+
+    if (this.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE)) {
+      this.logger.log('⚠️ Found unexpected temporary commit!');
+      this.logger.log(
+        'It must be left over from a previous failed run.  Remove it before proceeding.',
+      );
+      throw new Error('unexpected temporary commit');
+    }
   }
 
   protected prepare() {
