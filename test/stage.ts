@@ -1,4 +1,7 @@
-import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
+import {
+  BACKUP_STASH_MESSAGE,
+  STAGED_CHANGES_COMMIT_MESSAGE,
+} from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1 } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
@@ -44,6 +47,17 @@ describe('Stage', () => {
       stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
       assert.throws(() => stage.check(), /unexpected backup stash/);
+    });
+
+    it('throws if backup stash from previous run is present', async () => {
+      stage.git([
+        'commit',
+        '--allow-empty',
+        '-m',
+        STAGED_CHANGES_COMMIT_MESSAGE,
+      ]);
+
+      assert.throws(() => stage.check(), /unexpected temporary commit/);
     });
   });
 
@@ -539,6 +553,16 @@ describe('Stage', () => {
 
       assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
+
+    it('resets temporary staged changes commit', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.merge();
+
+      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
+    });
   });
 
   describe('::revert', () => {
@@ -736,6 +760,16 @@ describe('Stage', () => {
       stage.revert();
 
       assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
+
+    it('resets temporary staged changes commit', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.revert();
+
+      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
     });
 
     it('throws if expected backup stash is not found', async () => {

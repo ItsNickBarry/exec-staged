@@ -1,4 +1,7 @@
-import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
+import {
+  BACKUP_STASH_MESSAGE,
+  STAGED_CHANGES_COMMIT_MESSAGE,
+} from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_SLEEP } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
@@ -71,5 +74,6 @@ describe('CLI', () => {
     assert.equal(child.exitCode, 1);
     assert.equal(newStatus, oldStatus);
     assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
   });
 });
