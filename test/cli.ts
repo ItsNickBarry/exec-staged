@@ -9,6 +9,8 @@ import child_process from 'node:child_process';
 import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
 
+const BIN = path.resolve(import.meta.dirname, '../dist/bin/cli.js');
+
 describe('CLI', () => {
   let stage: TestStage;
 
@@ -17,11 +19,9 @@ describe('CLI', () => {
   });
 
   it('returns exit code 0 on success', async () => {
-    const child = child_process.fork(
-      path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      ['--quiet', TASK_EXIT_0],
-      { cwd: stage.cwd },
-    );
+    const child = child_process.spawn('node', [BIN, TASK_EXIT_0], {
+      cwd: stage.cwd,
+    });
 
     const closed = new Promise<void>((resolve) => {
       child.once('close', () => resolve());
@@ -33,11 +33,9 @@ describe('CLI', () => {
   });
 
   it('returns exit code 1 on failure', async () => {
-    const child = child_process.fork(
-      path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      ['--quiet', TASK_EXIT_1],
-      { cwd: stage.cwd },
-    );
+    const child = child_process.spawn('node', [BIN, TASK_EXIT_1], {
+      cwd: stage.cwd,
+    });
 
     const closed = new Promise<void>((resolve) => {
       child.once('close', () => resolve());
@@ -53,19 +51,19 @@ describe('CLI', () => {
 
     const oldStatus = stage.git(['status', '-z']);
 
-    const child = child_process.fork(
-      path.resolve(import.meta.dirname, '../src/bin/cli.ts'),
-      ['--quiet', TASK_SLEEP],
-      { cwd: stage.cwd },
-    );
+    const child = child_process.spawn('node', [BIN, TASK_SLEEP], {
+      cwd: stage.cwd,
+    });
 
     const closed = new Promise<void>((resolve) => {
       child.once('close', () => resolve());
     });
 
     setTimeout(() => {
-      child.kill();
-    }, 500);
+      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      // assert that kill signal was received before process ended normally
+      assert(child.kill());
+    }, 750);
 
     await closed;
 
