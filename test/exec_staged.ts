@@ -59,7 +59,7 @@ describe('execStaged', () => {
     assert.equal(exitCode, 0);
   });
 
-  it.only('hides unstaged additions, deletions, and modifications from tasks', async () => {
+  it('hides unstaged additions, deletions, and modifications from tasks', async () => {
     stage.writeFile('test.txt');
     stage.writeFile('subdirectory/test.txt');
     stage.writeFile('test-D.txt');
