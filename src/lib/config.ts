@@ -35,7 +35,8 @@ export const resolveConfig = (
   }));
 };
 
-const validateUserConfig = (userConfig: ExecStagedUserConfig) => {
+/** @internal */
+export const validateUserConfig = (userConfig: ExecStagedUserConfig) => {
   if (!isValidUserConfig(userConfig)) {
     throw new Error('invalid config');
   }

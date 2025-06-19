@@ -1,5 +1,10 @@
-import { loadConfig, resolveConfig } from '../src/lib/config.js';
+import {
+  loadConfig,
+  resolveConfig,
+  validateUserConfig,
+} from '../src/lib/config.js';
 import { DEFAULT_CONFIG_ENTRY } from '../src/lib/constants.js';
+import { ExecStagedUserConfig } from '../src/types.js';
 import { TASK_EXIT_0 } from './fixtures/tasks.js';
 import { TestStage } from './fixtures/test_stage.js';
 import assert from 'node:assert';
@@ -55,5 +60,43 @@ describe('resolveConfig', () => {
     const userConfig = [{ task: 'task', diff: 'diff', glob: 'glob' }];
     Object.freeze(userConfig);
     assert.deepStrictEqual(resolveConfig(userConfig), userConfig);
+  });
+});
+
+describe('validateUserConfig', () => {
+  it('does not throw if config is valid', async () => {
+    assert.doesNotThrow(() => validateUserConfig([]));
+    assert.doesNotThrow(() => validateUserConfig(['task']));
+    assert.doesNotThrow(() => validateUserConfig([{ task: 'task' }]));
+    assert.doesNotThrow(() => validateUserConfig(['task', { task: 'task' }]));
+    assert.doesNotThrow(() =>
+      validateUserConfig([{ task: 'task', diff: 'diff', glob: 'glob' }]),
+    );
+  });
+
+  it('throws if config is invalid', async () => {
+    assert.throws(
+      () => validateUserConfig(undefined as unknown as ExecStagedUserConfig),
+      /invalid config/,
+    );
+    assert.throws(
+      () => validateUserConfig({} as unknown as ExecStagedUserConfig),
+      /invalid config/,
+    );
+    assert.throws(
+      () => validateUserConfig('task' as unknown as ExecStagedUserConfig),
+      /invalid config/,
+    );
+    assert.throws(
+      () => validateUserConfig([{}] as unknown as ExecStagedUserConfig),
+      /invalid config/,
+    );
+    assert.throws(
+      () =>
+        validateUserConfig([
+          { diff: 'diff', glob: 'glob' },
+        ] as unknown as ExecStagedUserConfig),
+      /invalid config/,
+    );
   });
 });
