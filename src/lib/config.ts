@@ -1,12 +1,12 @@
 import pkg from '../../package.json' with { type: 'json' };
 import type { ExecStagedConfig, ExecStagedUserConfig } from '../types.js';
 import { DEFAULT_CONFIG_ENTRY } from './constants.js';
-import { lilconfig } from 'lilconfig';
+import { cosmiconfig } from 'cosmiconfig';
 
 export const loadConfig = async (
   cwd: string,
 ): Promise<ExecStagedUserConfig> => {
-  const configResult = await lilconfig(pkg.name).search(cwd);
+  const configResult = await cosmiconfig(pkg.name).search(cwd);
 
   if (configResult) {
     const { config, filepath } = configResult;
