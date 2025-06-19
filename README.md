@@ -1,6 +1,20 @@
 # Exec Staged
 
-Run commands against files staged in git. Ignore unstaged changes and untracked files.
+Run commands against files staged in git, ignoring unstaged changes and untracked files.
+
+### Use Cases
+
+- 🧵 Lint new changes before commit.
+- 🧪 Test changes in isolation before commit.
+- ✨ ???
+
+### How it Works
+
+1. Unstaged changes and untracked files are hidden in a git stash. This inludes unstaged deletions, which are temporarily restored.
+2. User-configured tasks are run, with staged files passed in according to configuration.
+3. Any changes made by tasks are added to the git index. This includes additions and deletions.
+4. The stashed changes are restored.
+5. If any step fails, the initial state is fully restored.
 
 ## Installation
 
