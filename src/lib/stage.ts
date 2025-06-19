@@ -211,6 +211,11 @@ export class Stage {
             glob,
           );
 
+          if (files.length === 0) {
+            this.logger.log(`➡️ No matching files, skipping task...`);
+            continue;
+          }
+
           taskArgs.splice(interpolationIndex, 1, ...files);
         }
 
