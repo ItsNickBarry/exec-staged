@@ -3,7 +3,9 @@ import type { ExecStagedConfig, ExecStagedUserConfig } from '../types.js';
 import { DEFAULT_CONFIG_ENTRY } from './constants.js';
 import { lilconfig } from 'lilconfig';
 
-export const loadConfig = async (cwd: string): Promise<ExecStagedConfig> => {
+export const loadConfig = async (
+  cwd: string,
+): Promise<ExecStagedUserConfig> => {
   const configResult = await lilconfig(pkg.name).search(cwd);
 
   if (configResult) {

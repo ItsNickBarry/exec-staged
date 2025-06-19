@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import pkg from '../../package.json' with { type: 'json' };
-import { loadConfig, resolveConfig } from '../lib/config.js';
+import { loadConfig } from '../lib/config.js';
 import { execStaged } from '../lib/exec_staged.js';
 import { program } from 'commander';
 import path from 'node:path';
@@ -17,6 +17,6 @@ const args = program.args;
 
 const cwd = path.resolve(options.cwd ?? '');
 
-const tasks = args.length ? resolveConfig(args) : await loadConfig(cwd);
+const tasks = args.length ? args : await loadConfig(cwd);
 
 process.exitCode = await execStaged(cwd, tasks, options);

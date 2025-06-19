@@ -1,5 +1,4 @@
 import pkg from '../../package.json';
-import { resolveConfig } from '../../src/lib/config.js';
 import { execStaged } from '../../src/lib/exec_staged.js';
 import { spawnSync } from '../../src/lib/spawn.js';
 import { Stage } from '../../src/lib/stage.js';
@@ -56,7 +55,7 @@ export class TestStage extends Stage {
   }
 
   public async execStaged(tasks: ExecStagedUserConfig): Promise<ExitCode> {
-    return await execStaged(this.cwd, resolveConfig(tasks), TEST_STAGE_OPTIONS);
+    return await execStaged(this.cwd, tasks, TEST_STAGE_OPTIONS);
   }
 
   public spawnSync(task: string) {
