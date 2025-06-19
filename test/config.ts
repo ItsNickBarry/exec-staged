@@ -1,33 +1,32 @@
 import { loadConfig, resolveConfig } from '../src/lib/config.js';
 import { DEFAULT_CONFIG_ENTRY } from '../src/lib/constants.js';
+import { TASK_EXIT_0 } from './fixtures/tasks.js';
 import { TestStage } from './fixtures/test_stage.js';
 import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
-import { describe, it } from 'node:test';
+import { describe, it, beforeEach } from 'node:test';
 
 describe('loadConfig', () => {
+  let stage: TestStage;
+
+  beforeEach(async () => {
+    stage = TestStage.create();
+  });
+
   it('returns config from exec-staged.config.js', async () => {
-    const { cwd } = TestStage.create();
-    await fs.promises.writeFile(
-      path.resolve(cwd, 'exec-staged.config.js'),
-      `export default { '*': "echo 'task'" };`,
+    stage.writeFile(
+      'exec-staged.config.js',
+      `export default ['${TASK_EXIT_0}'];`,
     );
-    assert.deepEqual(await loadConfig(cwd), { '*': "echo 'task'" });
+    assert.deepEqual(await loadConfig(stage.cwd), [TASK_EXIT_0]);
   });
 
   it('returns config from .exec-stagedrc.json', async () => {
-    const { cwd } = TestStage.create();
-    await fs.promises.writeFile(
-      path.resolve(cwd, '.exec-stagedrc.json'),
-      JSON.stringify({ '*': "echo 'task'" }),
-    );
-    assert.deepEqual(await loadConfig(cwd), { '*': "echo 'task'" });
+    stage.writeFile('.exec-stagedrc.json', JSON.stringify([TASK_EXIT_0]));
+    assert.deepEqual(await loadConfig(stage.cwd), [TASK_EXIT_0]);
   });
 
   it('returns empty config if no config is found', async () => {
-    const { cwd } = TestStage.create();
-    assert.deepEqual(await loadConfig(cwd), []);
+    assert.deepEqual(await loadConfig(stage.cwd), []);
   });
 });
 
