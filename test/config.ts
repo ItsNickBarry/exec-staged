@@ -28,6 +28,12 @@ describe('loadConfig', () => {
   it('returns empty config if no config is found', async () => {
     assert.deepEqual(await loadConfig(stage.cwd), []);
   });
+
+  it('throws if config is invalid', async () => {
+    stage.writeFile('exec-staged.config.js', `export default [{}];`);
+
+    await assert.rejects(async () => loadConfig(stage.cwd), /invalid config/);
+  });
 });
 
 describe('resolveConfig', () => {

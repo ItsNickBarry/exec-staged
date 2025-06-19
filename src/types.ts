@@ -8,7 +8,7 @@ export type ExecStagedConfigEntry = {
 
 export type ExecStagedConfig = ExecStagedConfigEntry[];
 
-type ExecStagedUserConfigEntry =
+export type ExecStagedUserConfigEntry =
   | (Pick<ExecStagedConfigEntry, 'task'> & Partial<ExecStagedConfigEntry>)
   | ExecStagedConfigEntry['task'];
 

@@ -1,5 +1,9 @@
 import pkg from '../../package.json' with { type: 'json' };
-import type { ExecStagedConfig, ExecStagedUserConfig } from '../types.js';
+import type {
+  ExecStagedConfig,
+  ExecStagedUserConfig,
+  ExecStagedUserConfigEntry,
+} from '../types.js';
 import { DEFAULT_CONFIG_ENTRY } from './constants.js';
 import { cosmiconfig } from 'cosmiconfig';
 
@@ -13,7 +17,7 @@ export const loadConfig = async (
 
     console.log(`Config loaded from ${filepath}`);
 
-    // TODO: validate
+    validateUserConfig(config);
 
     return config;
   } else {
@@ -29,4 +33,38 @@ export const resolveConfig = (
     ...DEFAULT_CONFIG_ENTRY,
     ...(typeof entry === 'string' ? { task: entry } : entry),
   }));
+};
+
+const validateUserConfig = (userConfig: ExecStagedUserConfig) => {
+  if (!isValidUserConfig(userConfig)) {
+    throw new Error('invalid config');
+  }
+};
+
+const isValidUserConfig = (userConfig: ExecStagedUserConfig): boolean => {
+  return (
+    Array.isArray(userConfig) &&
+    userConfig.every((userConfigEntry) =>
+      isValidUserConfigEntry(userConfigEntry),
+    )
+  );
+};
+
+const isValidUserConfigEntry = (
+  userConfigEntry: ExecStagedUserConfigEntry,
+): boolean => {
+  if (typeof userConfigEntry === 'string') return true;
+  if (typeof userConfigEntry !== 'object') return false;
+  if (typeof userConfigEntry.task !== 'string') return false;
+  if (
+    typeof userConfigEntry.diff !== 'string' &&
+    typeof userConfigEntry.diff !== 'undefined'
+  )
+    return false;
+  if (
+    typeof userConfigEntry.glob !== 'string' &&
+    typeof userConfigEntry.glob !== 'undefined'
+  )
+    return false;
+  return true;
 };
