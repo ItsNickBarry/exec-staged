@@ -201,7 +201,7 @@ export class Stage {
 
         const taskArgs = parseArgsStringToArgv(task);
 
-        const interpolationIndex = task.indexOf(INTERPOLATION_IDENTIFIER);
+        const interpolationIndex = taskArgs.indexOf(INTERPOLATION_IDENTIFIER);
 
         if (interpolationIndex !== -1) {
           const files = micromatch(
