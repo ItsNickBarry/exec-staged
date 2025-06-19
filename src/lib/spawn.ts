@@ -1,6 +1,5 @@
 import { execa, execaSync } from 'execa';
 import { registerExitHandler, deregisterExitHandler } from 'on-process-exit';
-import parseArgsStringToArgv from 'string-argv';
 
 /**
  * Spawn a child process asynchronously using the `execa` package.
@@ -14,11 +13,7 @@ import parseArgsStringToArgv from 'string-argv';
  * @throws ExecaError
  * @returns Execa `Result` promise.
  */
-export const spawn = async (cwd: string, args: string | string[]) => {
-  if (typeof args === 'string') {
-    args = parseArgsStringToArgv(args);
-  }
-
+export const spawn = async (cwd: string, args: string[]) => {
   const subprocess = execa({
     cwd,
     preferLocal: true,
@@ -41,10 +36,6 @@ export const spawn = async (cwd: string, args: string | string[]) => {
  * @throws ExecaSyncError
  * @returns Execa `SyncResult`.
  */
-export const spawnSync = (cwd: string, args: string | string[]) => {
-  if (typeof args === 'string') {
-    args = parseArgsStringToArgv(args);
-  }
-
+export const spawnSync = (cwd: string, args: string[]) => {
   return execaSync({ cwd })(args[0], args.slice(1));
 };

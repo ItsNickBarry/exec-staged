@@ -1,15 +1,18 @@
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   BACKUP_STASH_MESSAGE,
+  INTERPOLATION_IDENTIFIER,
   MERGE_FILES,
   STAGED_CHANGES_COMMIT_MESSAGE,
   stageLifecycleMessages,
 } from './constants.js';
 import { Logger } from './logger.js';
 import { spawn, spawnSync } from './spawn.js';
+import micromatch from 'micromatch';
 import fs from 'node:fs';
 import path from 'node:path';
 import semver from 'semver';
+import parseArgsStringToArgv from 'string-argv';
 
 export class Stage {
   protected readonly cwd: string;
@@ -196,9 +199,22 @@ export class Stage {
           `➡️ Running task ${i + 1} of ${tasks.length}: \`${task}\`...`,
         );
 
-        // TODO: diff and glob
+        const taskArgs = parseArgsStringToArgv(task);
 
-        const { stdout } = await spawn(this.cwd, task);
+        const interpolationIndex = task.indexOf(INTERPOLATION_IDENTIFIER);
+
+        if (interpolationIndex !== -1) {
+          const files = micromatch(
+            Object.entries(this.status)
+              .filter(([, s]) => s.match(new RegExp(`^[${diff}]`)))
+              .map(([f]) => f),
+            glob,
+          );
+
+          taskArgs.splice(interpolationIndex, 1, ...files);
+        }
+
+        const { stdout } = await spawn(this.cwd, taskArgs);
 
         this.logger.debug(stdout.replaceAll(/^/gm, '> '));
       } catch (error) {

@@ -13,6 +13,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { registerExitHandler } from 'on-process-exit';
+import parseArgsStringToArgv from 'string-argv';
 
 const TEST_STAGE_OPTIONS: StageOptions = { quiet: true };
 
@@ -59,7 +60,7 @@ export class TestStage extends Stage {
   }
 
   public spawnSync(task: string) {
-    return spawnSync(this.cwd, task);
+    return spawnSync(this.cwd, parseArgsStringToArgv(task));
   }
 
   public static create() {

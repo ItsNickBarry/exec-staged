@@ -11,6 +11,8 @@ export const MERGE_FILES = ['MERGE_HEAD', 'MERGE_MODE', 'MERGE_MSG'] as const;
 export const BACKUP_STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
 export const STAGED_CHANGES_COMMIT_MESSAGE = `💾 ${pkg.name} staged changes`;
 
+export const INTERPOLATION_IDENTIFIER = '$STAGED_FILES';
+
 const PREFIX = '➡️ ';
 
 export const stageLifecycleMessages = {
