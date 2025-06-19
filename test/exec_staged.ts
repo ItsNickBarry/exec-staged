@@ -229,5 +229,21 @@ describe('execStaged', () => {
     assert.equal(newStatus, oldStatus);
   });
 
-  // TODO: test restoration on merge failure
+  it('restores initial state on merge failure', async () => {
+    stage.writeFile('test.txt');
+    stage.writeFile('subdirectory/test.txt');
+    stage.writeFile('test-D.txt');
+    stage.writeFile('test-M.txt', 'old contents');
+    stage.git(['add', 'test-D.txt', 'test-M.txt']);
+    stage.git(['commit', '-m', 'add files']);
+    stage.rm('test-D.txt');
+    stage.writeFile('test-M.txt', 'new contents');
+
+    const oldStatus = stage.git(['status', '-v']);
+    const exitCode = await stage.execStaged(['rm test-M.txt']);
+    const newStatus = stage.git(['status', '-v']);
+
+    assert.equal(exitCode, 1);
+    assert.equal(newStatus, oldStatus);
+  });
 });
