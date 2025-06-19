@@ -1,5 +1,6 @@
 import {
   BACKUP_STASH_MESSAGE,
+  DEFAULT_CONFIG_ENTRY,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1 } from './fixtures/tasks';
@@ -309,11 +310,15 @@ describe('Stage', () => {
 
   describe('::run', () => {
     it('runs task', async () => {
-      await assert.doesNotReject(async () => stage.run([TASK_EXIT_0]));
+      await assert.doesNotReject(async () =>
+        stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_EXIT_0 }]),
+      );
     });
 
     it('throws if task fails', async () => {
-      await assert.rejects(async () => stage.run([TASK_EXIT_1]));
+      await assert.rejects(async () =>
+        stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_EXIT_1 }]),
+      );
     });
   });
 

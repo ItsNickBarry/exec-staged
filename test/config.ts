@@ -1,4 +1,5 @@
-import { loadConfig, parseTasks } from '../src/lib/config.js';
+import { loadConfig, resolveConfig } from '../src/lib/config.js';
+import { DEFAULT_CONFIG_ENTRY } from '../src/lib/constants.js';
 import { TestStage } from './fixtures/test_stage.js';
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -26,52 +27,28 @@ describe('loadConfig', () => {
 
   it('returns empty config if no config is found', async () => {
     const { cwd } = TestStage.create();
-    assert.deepEqual(await loadConfig(cwd), {});
+    assert.deepEqual(await loadConfig(cwd), []);
   });
 });
 
-describe('parseTasks', () => {
-  it('parses string', async () => {
-    const tasks = 'task';
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
+describe('resolveConfig', () => {
+  it('parses string entry', async () => {
+    const userConfig = ['task'];
+    assert.deepStrictEqual(resolveConfig(userConfig), [
+      { ...DEFAULT_CONFIG_ENTRY, task: 'task' },
+    ]);
   });
 
-  it('parses string array', async () => {
-    const tasks = ['task'];
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
+  it('parses object entry without optional parameters', async () => {
+    const userConfig = [{ task: 'task' }];
+    assert.deepStrictEqual(resolveConfig(userConfig), [
+      { ...DEFAULT_CONFIG_ENTRY, task: 'task' },
+    ]);
   });
 
-  it('parses function returning string', async () => {
-    const tasks = () => 'task';
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
-  });
-
-  it('parses function returning string array', async () => {
-    const tasks = () => ['task'];
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
-  });
-
-  it('parses async function returning string', async () => {
-    const tasks = async () => 'task';
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
-  });
-
-  it('parses nested functions', async () => {
-    const tasks = () => () => () => 'task';
-    assert.deepStrictEqual(await parseTasks(tasks), ['task']);
-  });
-
-  it('parses complex structure', async () => {
-    const tasks = [
-      () => 'a',
-      async () => [() => 'b'],
-      ['c', 'd', 'e'],
-      'f',
-      [() => 'g', () => 'h'],
-    ];
-
-    const expected = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-    assert.deepStrictEqual(await parseTasks(tasks), expected);
+  it('parses object entry with optional parameters', async () => {
+    const userConfig = [{ task: 'task', diff: 'diff', glob: 'glob' }];
+    Object.freeze(userConfig);
+    assert.deepStrictEqual(resolveConfig(userConfig), userConfig);
   });
 });

@@ -1,4 +1,4 @@
-import type { StageOptions } from '../types.js';
+import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   BACKUP_STASH_MESSAGE,
   MERGE_FILES,
@@ -29,7 +29,7 @@ export class Stage {
     this.patchPath = path.resolve(this.cwd, '.git', 'patch.diff');
   }
 
-  public async exec(tasks: string[]) {
+  public async exec(tasks: ExecStagedConfig) {
     try {
       this.check();
       this.prepare();
@@ -185,16 +185,18 @@ export class Stage {
     }
   }
 
-  protected async run(tasks: string[]) {
+  protected async run(tasks: ExecStagedConfig) {
     this.logger.log(stageLifecycleMessages.run);
 
     for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i];
+      const { task, diff, glob } = tasks[i];
 
       try {
         this.logger.log(
           `➡️ Running task ${i + 1} of ${tasks.length}: \`${task}\`...`,
         );
+
+        // TODO: diff and glob
 
         const { stdout } = await spawn(this.cwd, task);
 

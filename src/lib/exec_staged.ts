@@ -1,9 +1,9 @@
-import type { ExitCode, StageOptions } from '../types.js';
+import type { ExecStagedConfig, ExitCode, StageOptions } from '../types.js';
 import { Stage } from './stage.js';
 
 export const execStaged = async (
   cwd: string,
-  tasks: string[],
+  tasks: ExecStagedConfig,
   options: StageOptions = {},
 ): Promise<ExitCode> => {
   try {

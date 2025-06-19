@@ -1,4 +1,10 @@
 import pkg from '../../package.json' with { type: 'json' };
+import type { ExecStagedConfigEntry } from '../types.js';
+
+export const DEFAULT_CONFIG_ENTRY: Omit<ExecStagedConfigEntry, 'task'> = {
+  glob: '*',
+  diff: 'ACMR',
+};
 
 export const MERGE_FILES = ['MERGE_HEAD', 'MERGE_MODE', 'MERGE_MSG'] as const;
 

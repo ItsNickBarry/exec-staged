@@ -1,5 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
-import type { ExecStagedConfig, Tasks } from '../types.js';
+import type { ExecStagedConfig, ExecStagedUserConfig } from '../types.js';
+import { DEFAULT_CONFIG_ENTRY } from './constants.js';
 import { lilconfig } from 'lilconfig';
 
 export const loadConfig = async (cwd: string): Promise<ExecStagedConfig> => {
@@ -15,20 +16,15 @@ export const loadConfig = async (cwd: string): Promise<ExecStagedConfig> => {
     return config;
   } else {
     console.log('No config found');
-    return {};
+    return [];
   }
 };
 
-export const parseTasks = async (tasks: Tasks): Promise<string[]> => {
-  if (typeof tasks === 'string') {
-    return [tasks];
-  }
-
-  if (typeof tasks === 'function') {
-    tasks = await tasks();
-  }
-
-  tasks = [tasks].flat();
-
-  return (await Promise.all(tasks.map(parseTasks))).flat();
+export const resolveConfig = (
+  userConfig: ExecStagedUserConfig,
+): ExecStagedConfig => {
+  return userConfig.map((entry) => ({
+    ...DEFAULT_CONFIG_ENTRY,
+    ...(typeof entry === 'string' ? { task: entry } : entry),
+  }));
 };
