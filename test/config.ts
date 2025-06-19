@@ -17,6 +17,14 @@ describe('loadConfig', () => {
     stage = TestStage.create();
   });
 
+  it('returns config from exec-staged.config.ts', async () => {
+    stage.writeFile(
+      'exec-staged.config.ts',
+      `export default ['${TASK_EXIT_0}'];`,
+    );
+    assert.deepEqual(await loadConfig(stage.cwd), [TASK_EXIT_0]);
+  });
+
   it('returns config from exec-staged.config.js', async () => {
     stage.writeFile(
       'exec-staged.config.js',
