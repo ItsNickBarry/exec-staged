@@ -23,7 +23,7 @@ npx exec-staged
 If no configuration is present, the executable can still run tasks passed as arguments:
 
 ```bash
-npx exec-staged "npx test"
+npx exec-staged "npm test"
 ```
 
 ### Run in a Script
