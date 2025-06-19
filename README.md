@@ -137,7 +137,7 @@ Defining `diff` or `glob` on a task that does not include the `$STAGED_FILES` to
 
 ## Safety Features
 
-Before running any potentially desctructive scripts, `exec-staged` stores all outstanding changes, including untracked files, in a backup stash. If any task fails, or if `exec-staged` is interrupted by an end-process signal (such as via <kbd>Ctrl</kbd> + <kbd>C</kbd>), the repository's original state is restored using this stash.
+Before running any potentially destructive scripts, `exec-staged` stores all outstanding changes, including untracked files, in a backup stash. If any task fails, or if `exec-staged` is interrupted by an end-process signal (such as via <kbd>Ctrl + C</kbd>), the repository's original state is restored using this stash. Avoid running any tasks that interact with git, especially those that make commits or modify the stash.
 
 ### Recovery
 
@@ -154,6 +154,8 @@ git add -A
 git reset --hard HEAD
 git stash pop --index
 ```
+
+To prevent data loss, `exec-staged` will not run if a stash or commit from a previous run is present.
 
 ## See Also
 
