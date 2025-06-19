@@ -79,7 +79,61 @@ Add a `package.json` script to run husky whenever your repository is cloned:
 
 ## Configuration
 
-TODO
+`exec-staged` configuration consists of a list of commands to execute against the stage. Each command may be formatted as a plain `string`, or as an object containing additional attributes.
+
+All [Cosmiconfig-compatible](https://www.npmjs.com/package/cosmiconfig#searchplaces) configuration files are supported.
+
+Here is an example configuration:
+
+```typescript
+// exec-staged.config.ts
+import type { ExecStagedUserConfig } from 'exec-staged/types';
+
+const config: ExecStagedUserConfig = [
+  'knip',
+  'knip --production',
+  { task: 'prettier --write $STAGED_FILES', glob: '*.{js,ts,json,md}' },
+];
+
+export default config;
+```
+
+Plain commands are run every time, as-is:
+
+<!-- prettier-ignore-start -->
+```typescript
+'knip --production'
+```
+<!-- prettier-ignore-end -->
+
+Commands which include the `$STAGED_FILES` token are only run if staged files are found, and those files are interpolated into the command in place of the token.
+
+<!-- prettier-ignore-start -->
+```typescript
+'prettier --write $STAGED_FILES'
+// => prettier --write new_file.js modified_file.js
+```
+<!-- prettier-ignore-end -->
+
+File filtering can be customized.
+
+To filter files by name, add a `glob` filter (defaults to `'*'`):
+
+```typescript
+{ task: 'prettier --write $STAGED_FILES', glob: '*.{js,ts,json,md}' }
+```
+
+To filter files by git status, add a `diff` filter (defaults to `'ACMR'`; see [here](https://git-scm.com/docs/git-status#_short_format)):
+
+```typescript
+{ task: 'prettier --write $STAGED_FILES', diff: 'A' }
+```
+
+Defining `diff` or `glob` on a task that does not include the `$STAGED_FILES` token has no effect:
+
+```typescript
+{ task: 'knip', diff: 'NO EFFECT', glob: 'NO EFFECT' }
+```
 
 ## Safety Features
 
