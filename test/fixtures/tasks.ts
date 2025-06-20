@@ -7,6 +7,8 @@ export const TASK_ASSERT_NO_CHANGES = `bash -c '[ -z "$(git status --porcelain |
 export const TASK_ASSERT_NO_UNSTAGED_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^.[^ ]")" ] && exit 0 || exit 1'`;
 export const TASK_EXIT_0 = 'bash -c "exit 0"';
 export const TASK_EXIT_1 = 'bash -c "exit 1"';
+export const TASK_KNIP = 'knip';
+export const TASK_PRETTIER_WRITE_ALL = 'prettier --write .';
 export const TASK_SLEEP = 'sleep 1';
 
 // skip tests if this file is loaded as an import
@@ -180,6 +182,26 @@ if (process.argv[1] === import.meta.filename) {
     describe('TASK_EXIT_1', () => {
       it('throws', async () => {
         assert.throws(() => stage.spawnSync(TASK_EXIT_1));
+      });
+    });
+
+    describe('TASK_KNIP', () => {
+      it('lints project with knip', async () => {
+        assert.doesNotThrow(() => stage.spawnSync(TASK_KNIP));
+        // trigger "unused file" error
+        stage.writeFile('test.js');
+        assert.throws(() => stage.spawnSync(TASK_KNIP));
+      });
+    });
+
+    describe('TASK_PRETTIER_WRITE', () => {
+      it('modifies unformatted files', async () => {
+        stage.writeFile('test.js', `export default 'test string'`);
+        assert.doesNotThrow(() => stage.spawnSync(TASK_PRETTIER_WRITE_ALL));
+        assert.equal(
+          stage.readFile('test.js'),
+          `export default "test string";\n`,
+        );
       });
     });
 
