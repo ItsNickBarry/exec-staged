@@ -188,8 +188,8 @@ if (process.argv[1] === import.meta.filename) {
     describe('TASK_KNIP', () => {
       it('lints project with knip', async () => {
         assert.doesNotThrow(() => stage.spawnSync(TASK_KNIP));
-        // trigger "unused file" error
-        stage.writeFile('test.js');
+        // use `index.js` as file so that knip recognizes it as an entry without configuration
+        stage.writeFile('index.js', `require('unknown-package')`);
         assert.throws(() => stage.spawnSync(TASK_KNIP));
       });
     });
