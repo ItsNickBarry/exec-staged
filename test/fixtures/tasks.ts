@@ -9,7 +9,7 @@ export const TASK_ASSERT_NO_UNSTAGED_CHANGES = `bash -c '[ -z "$(git status --po
 export const TASK_EXIT_0 = 'bash -c "exit 0"';
 export const TASK_EXIT_1 = 'bash -c "exit 1"';
 export const TASK_KNIP = 'knip';
-export const TASK_PRETTIER_WRITE_ALL = 'prettier --write .';
+export const TASK_PRETTIER_WRITE_FILES = `prettier --write ${INTERPOLATION_IDENTIFIER}`;
 export const TASK_RM_FILES = `rm ${INTERPOLATION_IDENTIFIER}`;
 export const TASK_SLEEP = 'sleep 1';
 
@@ -196,10 +196,17 @@ if (process.argv[1] === import.meta.filename) {
       });
     });
 
-    describe('TASK_PRETTIER_WRITE', () => {
+    describe('TASK_PRETTIER_WRITE_FILES', () => {
       it('modifies unformatted files', async () => {
         stage.writeFile('test.js', `export default 'test string'`);
-        assert.doesNotThrow(() => stage.spawnSync(TASK_PRETTIER_WRITE_ALL));
+        assert.doesNotThrow(() =>
+          stage.spawnSync(
+            TASK_PRETTIER_WRITE_FILES.replace(
+              INTERPOLATION_IDENTIFIER,
+              'test.js',
+            ),
+          ),
+        );
         assert.equal(
           stage.readFile('test.js'),
           `export default "test string";\n`,
