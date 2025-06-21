@@ -24,6 +24,7 @@ export class Stage {
   } = {};
   private head?: string;
   private readonly patchPath: string;
+  private gitDir?: string;
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
@@ -115,6 +116,7 @@ export class Stage {
     this.logger.log(stageLifecycleMessages.prepare);
 
     this.head = this.git(['rev-parse', 'HEAD']);
+    this.gitDir = this.git(['rev-parse', '--absolute-git-dir']);
 
     this.git(['status', '--porcelain'])
       .split('\n')
@@ -339,10 +341,8 @@ export class Stage {
   }
 
   private backupMergeStatus() {
-    const gitDir = path.resolve(this.cwd, '.git');
-
     for (const mergeFile of MERGE_FILES) {
-      const file = path.resolve(gitDir, mergeFile);
+      const file = path.resolve(this.gitDir!, mergeFile);
       if (fs.existsSync(file)) {
         this.mergeStatus[mergeFile] = fs.readFileSync(file);
       }
@@ -350,13 +350,11 @@ export class Stage {
   }
 
   private restoreMergeStatus() {
-    const gitDir = path.resolve(this.cwd, '.git');
-
     for (const mergeFile of Object.keys(
       this.mergeStatus,
     ) as (keyof typeof this.mergeStatus)[]) {
       const contents = this.mergeStatus[mergeFile]!;
-      fs.writeFileSync(path.resolve(gitDir, mergeFile), contents);
+      fs.writeFileSync(path.resolve(this.gitDir!, mergeFile), contents);
     }
   }
 
