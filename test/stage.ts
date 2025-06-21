@@ -1,9 +1,10 @@
 import {
   BACKUP_STASH_MESSAGE,
   DEFAULT_CONFIG_ENTRY,
+  INTERPOLATION_IDENTIFIER,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
-import { TASK_EXIT_0, TASK_EXIT_1 } from './fixtures/tasks';
+import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
 import path from 'node:path';
@@ -318,6 +319,58 @@ describe('Stage', () => {
     it('throws if task fails', async () => {
       await assert.rejects(async () =>
         stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_EXIT_1 }]),
+      );
+    });
+
+    it('interpolates files into command if command includes interpolation token', async () => {
+      stage.writeFile('test.js');
+      stage.git(['add', 'test.js']);
+
+      stage.prepare();
+      await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
+
+      assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+    });
+
+    it('filters interpolated files with diff filter', async () => {
+      stage.writeFile('test-M.js', 'old contents');
+      stage.git(['add', 'test-M.js']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('test-A.js');
+      stage.writeFile('test-M.js', 'new contents');
+      stage.git(['add', 'test-A.js', 'test-M.js']);
+
+      stage.prepare();
+      await stage.run([
+        { ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES, diff: 'A' },
+      ]);
+
+      assert.throws(() => stage.readFile('test-A.js'), /ENOENT/);
+      assert.doesNotThrow(() => stage.readFile('test-M.js'));
+    });
+
+    it('filters interpolated files with glob filter', async () => {
+      stage.writeFile('test.js');
+      stage.writeFile('test.ts');
+      stage.git(['add', 'test.js', 'test.ts']);
+
+      stage.prepare();
+      await stage.run([
+        { ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES, glob: '*.js' },
+      ]);
+
+      assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+      assert.doesNotThrow(() => stage.readFile('test.ts'));
+    });
+
+    it('does not run task if command includes interpolation token and no files match', async () => {
+      await assert.doesNotReject(async () =>
+        stage.run([
+          {
+            ...DEFAULT_CONFIG_ENTRY,
+            task: `${TASK_EXIT_1} ${INTERPOLATION_IDENTIFIER}`,
+          },
+        ]),
       );
     });
   });
