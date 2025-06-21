@@ -1,3 +1,4 @@
+import { INTERPOLATION_IDENTIFIER } from '../../src/lib/constants';
 import { TestStage } from './test_stage';
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
@@ -9,6 +10,7 @@ export const TASK_EXIT_0 = 'bash -c "exit 0"';
 export const TASK_EXIT_1 = 'bash -c "exit 1"';
 export const TASK_KNIP = 'knip';
 export const TASK_PRETTIER_WRITE_ALL = 'prettier --write .';
+export const TASK_RM_FILES = `rm ${INTERPOLATION_IDENTIFIER}`;
 export const TASK_SLEEP = 'sleep 1';
 
 // skip tests if this file is loaded as an import
@@ -202,6 +204,20 @@ if (process.argv[1] === import.meta.filename) {
           stage.readFile('test.js'),
           `export default "test string";\n`,
         );
+      });
+    });
+
+    describe('TASK_RM_FILES', () => {
+      it('deletes matching files', async () => {
+        // interpolation does not take place in this context, so we use a file
+        // with the same name as the interpolation filter
+        stage.writeFile(INTERPOLATION_IDENTIFIER);
+        stage.writeFile('test.js');
+
+        assert.doesNotThrow(() => stage.spawnSync(TASK_RM_FILES));
+
+        assert.throws(() => stage.readFile(INTERPOLATION_IDENTIFIER), /ENOENT/);
+        assert.doesNotThrow(() => stage.readFile('test.js'));
       });
     });
 
