@@ -16,7 +16,7 @@ describe('knip', () => {
     stage.git(['add', 'test-D.js', 'test-M.js']);
     stage.git(['commit', '-m', 'add files']);
 
-    assert.equal(await stage.execStaged([TASK_KNIP]), 1);
+    assert.equal(await stage.execStaged([TASK_KNIP]), false);
 
     // stage changes to committed files that will fix knip errors
     stage.rm('test-D.js');
@@ -27,10 +27,10 @@ describe('knip', () => {
     stage.writeFile('test-A.js', `require('unknown-package')`);
     stage.writeFile('test-M.js', `require('unknown-package')`);
 
-    assert.equal(await stage.execStaged([TASK_KNIP]), 0);
+    assert.equal(await stage.execStaged([TASK_KNIP]), true);
 
     stage.git(['add', 'test-A.js', 'test-M.js']);
 
-    assert.equal(await stage.execStaged([TASK_KNIP]), 1);
+    assert.equal(await stage.execStaged([TASK_KNIP]), false);
   });
 });

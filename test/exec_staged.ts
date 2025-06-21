@@ -21,29 +21,29 @@ describe('execStaged', () => {
     stage.writeFile('test.txt');
     stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
-    const exitCode = await stage.execStaged([]);
+    const result = await stage.execStaged([]);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
   });
 
   it('returns exit code 1 if not git repository', async () => {
     stage.rm('.git');
 
-    const exitCode = await stage.execStaged([]);
+    const result = await stage.execStaged([]);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
   });
 
   it('returns exit code 0 if all tasks and git operations pass', async () => {
-    const exitCode = await stage.execStaged([TASK_EXIT_0]);
+    const result = await stage.execStaged([TASK_EXIT_0]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('returns exit code 1 if task fails', async () => {
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
   });
 
   it('returns exit code 0 if no files are known to git', async () => {
@@ -54,9 +54,9 @@ describe('execStaged', () => {
     stage.git(['init']);
     stage.git(['commit', '-m', 'initial commit', '--allow-empty']);
 
-    const exitCode = await stage.execStaged([TASK_EXIT_0]);
+    const result = await stage.execStaged([TASK_EXIT_0]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('hides unstaged additions, deletions, and modifications from tasks', async () => {
@@ -69,9 +69,9 @@ describe('execStaged', () => {
     stage.rm('test-D.txt');
     stage.writeFile('test-M.txt', 'new contents');
 
-    const exitCode = await stage.execStaged([TASK_ASSERT_NO_CHANGES]);
+    const result = await stage.execStaged([TASK_ASSERT_NO_CHANGES]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('hides unstaged modifications to staged additions from tasks', async () => {
@@ -79,12 +79,12 @@ describe('execStaged', () => {
     stage.git(['add', 'test.txt']);
     stage.writeFile('test.txt', 'new contents');
 
-    const exitCode = await stage.execStaged([
+    const result = await stage.execStaged([
       TASK_ASSERT_CHANGES,
       TASK_ASSERT_NO_UNSTAGED_CHANGES,
     ]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('hides unstaged deletions from tasks (restores the files)', async () => {
@@ -93,18 +93,18 @@ describe('execStaged', () => {
     stage.git(['commit', '-m', 'add files']);
     stage.rm('test.txt');
 
-    const exitCode = await stage.execStaged([TASK_ASSERT_NO_CHANGES]);
+    const result = await stage.execStaged([TASK_ASSERT_NO_CHANGES]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('does not hide staged additions from tasks', async () => {
     stage.writeFile('test.txt');
     stage.git(['add', 'test.txt']);
 
-    const exitCode = await stage.execStaged([TASK_ASSERT_CHANGES]);
+    const result = await stage.execStaged([TASK_ASSERT_CHANGES]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('does not hide staged modifications from tasks', async () => {
@@ -114,9 +114,9 @@ describe('execStaged', () => {
     stage.writeFile('test.txt', 'new contents');
     stage.git(['add', 'test.txt']);
 
-    const exitCode = await stage.execStaged([TASK_ASSERT_CHANGES]);
+    const result = await stage.execStaged([TASK_ASSERT_CHANGES]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   it('does not hide staged deletions from tasks', async () => {
@@ -126,9 +126,9 @@ describe('execStaged', () => {
     stage.rm('test.txt');
     stage.git(['add', 'test.txt']);
 
-    const exitCode = await stage.execStaged([TASK_ASSERT_CHANGES]);
+    const result = await stage.execStaged([TASK_ASSERT_CHANGES]);
 
-    assert.equal(exitCode, 0);
+    assert.equal(result, true);
   });
 
   // TODO: test merge
@@ -139,10 +139,10 @@ describe('execStaged', () => {
     stage.git(['add', 'test.txt']);
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -151,10 +151,10 @@ describe('execStaged', () => {
     stage.writeFile('subdirectory/test.txt');
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -166,10 +166,10 @@ describe('execStaged', () => {
     stage.git(['add', 'test.txt']);
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -180,10 +180,10 @@ describe('execStaged', () => {
     stage.writeFile('test.txt', 'new contents');
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -193,10 +193,10 @@ describe('execStaged', () => {
     stage.writeFile('test.txt', 'new contents');
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -207,10 +207,10 @@ describe('execStaged', () => {
     stage.rm('test.txt');
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -222,10 +222,10 @@ describe('execStaged', () => {
     stage.git(['add', 'test.txt']);
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged([TASK_EXIT_1]);
+    const result = await stage.execStaged([TASK_EXIT_1]);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 
@@ -240,10 +240,10 @@ describe('execStaged', () => {
     stage.writeFile('test-M.txt', 'new contents');
 
     const oldStatus = stage.git(['status', '-v']);
-    const exitCode = await stage.execStaged(['rm test-M.txt']);
+    const result = await stage.execStaged(['rm test-M.txt']);
     const newStatus = stage.git(['status', '-v']);
 
-    assert.equal(exitCode, 1);
+    assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
   });
 });

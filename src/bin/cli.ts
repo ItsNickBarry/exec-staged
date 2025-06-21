@@ -19,4 +19,8 @@ const cwd = path.resolve(options.cwd ?? '');
 
 const tasks = args.length ? args : await loadConfig(cwd);
 
-process.exitCode = await execStaged(cwd, tasks, options);
+const result = await execStaged(cwd, tasks, options);
+
+if (!result) {
+  process.exitCode ||= 1;
+}

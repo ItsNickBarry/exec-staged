@@ -5,7 +5,6 @@ import { Stage } from '../../src/lib/stage.js';
 import type {
   ExecStagedConfig,
   ExecStagedUserConfig,
-  ExitCode,
   StageOptions,
 } from '../../src/types.js';
 import envPaths from 'env-paths';
@@ -55,7 +54,7 @@ export class TestStage extends Stage {
     fs.rmSync(absolutePath, { recursive: true, force: true });
   }
 
-  public async execStaged(tasks: ExecStagedUserConfig): Promise<ExitCode> {
+  public async execStaged(tasks: ExecStagedUserConfig): Promise<boolean> {
     return await execStaged(this.cwd, tasks, TEST_STAGE_OPTIONS);
   }
 

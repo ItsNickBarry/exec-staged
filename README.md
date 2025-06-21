@@ -49,9 +49,9 @@ const cwd = process.cwd();
 const tasks = [`npm test`];
 const options = { quiet: true };
 
-const exitCode = await execStaged(cwd, tasks, options);
+const result = await execStaged(cwd, tasks, options);
 
-if (exitCode === 1) {
+if (!result) {
   throw new Error('exec-staged task failed');
 }
 ```
