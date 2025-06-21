@@ -261,9 +261,9 @@ describe('Stage', () => {
       const newStatus = stage.git(['status']);
       const newStatusPorcelain = stage.git(['status', '--porcelain']);
 
-      // TODO:
       assert.equal(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
+      assert.equal(newStatusPorcelain, 'AA test.txt');
     });
 
     it('does not throw with in-progress merge and no unmerged files', async () => {
