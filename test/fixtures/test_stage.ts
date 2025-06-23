@@ -43,8 +43,16 @@ export class TestStage extends Stage {
     fs.mkdirSync(this.resolve(relativePath), { recursive: true });
   }
 
+  public rename(relativeOldPath: string, relativeNewPath: string) {
+    fs.renameSync(this.resolve(relativeOldPath), this.resolve(relativeNewPath));
+  }
+
   public rm(relativePath: string) {
     fs.rmSync(this.resolve(relativePath), { recursive: true, force: true });
+  }
+
+  public symlink(relativeTarget: string, relativePath: string) {
+    fs.symlinkSync(this.resolve(relativeTarget), this.resolve(relativePath));
   }
 
   public async execStaged(tasks: ExecStagedUserConfig): Promise<boolean> {
