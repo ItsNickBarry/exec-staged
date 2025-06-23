@@ -30,28 +30,21 @@ export class TestStage extends Stage {
   }
 
   public readFile(relativePath: string): string {
-    assert(!path.isAbsolute(relativePath));
-    const absolutePath = path.resolve(this.cwd, relativePath);
-    return fs.readFileSync(absolutePath, 'utf-8');
+    return fs.readFileSync(this.resolve(relativePath), 'utf-8');
   }
 
   public writeFile(relativePath: string, contents: string = '') {
-    assert(!path.isAbsolute(relativePath));
-    const absolutePath = path.resolve(this.cwd, relativePath);
+    const absolutePath = this.resolve(relativePath);
     fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
     fs.writeFileSync(absolutePath, contents);
   }
 
   public mkdir(relativePath: string) {
-    assert(!path.isAbsolute(relativePath));
-    const absolutePath = path.resolve(this.cwd, relativePath);
-    fs.mkdirSync(absolutePath, { recursive: true });
+    fs.mkdirSync(this.resolve(relativePath), { recursive: true });
   }
 
   public rm(relativePath: string) {
-    assert(!path.isAbsolute(relativePath));
-    const absolutePath = path.resolve(this.cwd, relativePath);
-    fs.rmSync(absolutePath, { recursive: true, force: true });
+    fs.rmSync(this.resolve(relativePath), { recursive: true, force: true });
   }
 
   public async execStaged(tasks: ExecStagedUserConfig): Promise<boolean> {
@@ -60,6 +53,11 @@ export class TestStage extends Stage {
 
   public spawnSync(task: string) {
     return spawnSync(this.cwd, parseArgsStringToArgv(task));
+  }
+
+  private resolve(relativePath: string): string {
+    assert(!path.isAbsolute(relativePath), 'input path must be relative');
+    return path.resolve(this.cwd, relativePath);
   }
 
   public static create() {
