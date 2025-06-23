@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export class Logger {
+  public outFile: string;
   private quiet: boolean;
-  private outFile: string;
 
   constructor(quiet: boolean = false) {
     this.quiet = quiet;

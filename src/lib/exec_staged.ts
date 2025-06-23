@@ -7,11 +7,13 @@ export const execStaged = async (
   tasks: ExecStagedUserConfig,
   options: StageOptions = {},
 ): Promise<boolean> => {
+  const stage = new Stage(cwd, options);
+
   try {
-    const stage = new Stage(cwd, options);
     await stage.exec(resolveConfig(tasks));
     return true;
   } catch (error) {
+    console.log(`🪲 Log saved to: ${stage.logger.outFile}`);
     return false;
   }
 };

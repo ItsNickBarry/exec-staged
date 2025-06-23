@@ -15,9 +15,9 @@ import semver from 'semver';
 import parseArgsStringToArgv from 'string-argv';
 
 export class Stage {
+  public readonly logger: Logger;
   protected readonly cwd: string;
   protected stashed: boolean = false;
-  private readonly logger: Logger;
   private readonly status: { [file: string]: string } = {};
   private readonly mergeStatus: {
     [file in (typeof MERGE_FILES)[number]]?: Buffer;
