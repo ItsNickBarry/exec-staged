@@ -137,7 +137,7 @@ To filter files by name, add a `glob` filter (defaults to `'*'`):
 { task: 'prettier --write $FILES', glob: '*.{js,ts,json,md}' }
 ```
 
-To filter files by git status, add a `diff` filter (defaults to `'ACMR'`; see [here](https://git-scm.com/docs/git-status#_short_format)):
+To filter files by git status, add a `diff` filter (defaults to `'AM'`; see [here](https://git-scm.com/docs/git-status#_short_format)):
 
 ```typescript
 { task: 'prettier --write $FILES', diff: 'A' }

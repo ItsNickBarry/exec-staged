@@ -145,6 +145,19 @@ describe('Stage', () => {
       assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
 
+    it('creates a stash with renamed files', async () => {
+      stage.writeFile('test.old', 'contents');
+      stage.git(['add', 'test.old']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.old');
+      stage.writeFile('test.new', 'contents');
+      stage.git(['add', 'test.old', 'test.new']);
+
+      stage.prepare();
+
+      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
+
     it('hides unstaged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
@@ -227,6 +240,35 @@ describe('Stage', () => {
       stage.prepare();
 
       assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
+    });
+
+    it('does not hide renamed files', async () => {
+      stage.writeFile('test.old', 'contents');
+      stage.git(['add', 'test.old']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.old');
+      stage.writeFile('test.new', 'contents');
+      stage.git(['add', 'test.old', 'test.new']);
+
+      assert.equal(
+        stage.git(['status', '--porcelain']),
+        'R  test.old -> test.new',
+      );
+      assert.equal(
+        stage.git(['status', '--porcelain', '--no-renames']),
+        'A  test.new\nD  test.old',
+      );
+
+      stage.prepare();
+
+      assert.equal(
+        stage.git(['status', '--porcelain']),
+        'R  test.old -> test.new',
+      );
+      assert.equal(
+        stage.git(['status', '--porcelain', '--no-renames']),
+        'A  test.new\nD  test.old',
+      );
     });
 
     it('throws with in-progress merge and unmerged files', async () => {
@@ -332,6 +374,47 @@ describe('Stage', () => {
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
     });
 
+    it('inerpolates old and new versions of renamed files separately', async () => {
+      stage.writeFile('test.old', 'contents');
+      stage.git(['add', 'test.old']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.old');
+      stage.writeFile('test.new', 'contents');
+      stage.git(['add', 'test.old', 'test.new']);
+
+      stage.prepare();
+
+      await assert.doesNotReject(async () =>
+        stage.run([
+          {
+            ...DEFAULT_CONFIG_ENTRY,
+            task: `${TASK_EXIT_1} ${INTERPOLATION_IDENTIFIER}`,
+            diff: 'R',
+          },
+        ]),
+      );
+
+      await assert.rejects(async () =>
+        stage.run([
+          {
+            ...DEFAULT_CONFIG_ENTRY,
+            task: `${TASK_EXIT_1} ${INTERPOLATION_IDENTIFIER}`,
+            diff: 'D',
+          },
+        ]),
+      );
+
+      await assert.rejects(async () =>
+        stage.run([
+          {
+            ...DEFAULT_CONFIG_ENTRY,
+            task: `${TASK_EXIT_1} ${INTERPOLATION_IDENTIFIER}`,
+            diff: 'A',
+          },
+        ]),
+      );
+    });
+
     it('filters interpolated files with diff filter', async () => {
       stage.writeFile('test-M.js', 'old contents');
       stage.git(['add', 'test-M.js']);
@@ -361,6 +444,35 @@ describe('Stage', () => {
 
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
       assert.doesNotThrow(() => stage.readFile('test.ts'));
+    });
+
+    it('users default diff filter', async () => {
+      stage.writeFile('test-M.js', 'old contents');
+      stage.git(['add', 'test-M.js']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('test-A.js');
+      stage.writeFile('test-M.js', 'new contents');
+      stage.git(['add', 'test-A.js', 'test-M.js']);
+
+      stage.prepare();
+      await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
+
+      assert.throws(() => stage.readFile('test-A.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('test-M.js'), /ENOENT/);
+    });
+
+    it('uses default glob filter', async () => {
+      stage.writeFile('test.js');
+      stage.writeFile('subdirectory/test.js');
+      stage.writeFile('.test.js');
+      stage.git(['add', 'test.js', 'subdirectory/test.js', '.test.js']);
+
+      stage.prepare();
+      await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
+
+      assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('subdirectory/test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('.test.js'), /ENOENT/);
     });
 
     it('does not run task if command includes interpolation token and no files match', async () => {
@@ -516,6 +628,22 @@ describe('Stage', () => {
       stage.git(['commit', '-m', 'add file']);
       stage.rm('test.txt');
       stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('maintains renamed files', async () => {
+      stage.writeFile('test.old', 'contents');
+      stage.git(['add', 'test.old']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.old');
+      stage.writeFile('test.new', 'contents');
+      stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);
       stage.prepare();
@@ -773,6 +901,22 @@ describe('Stage', () => {
       stage.git(['commit', '-m', 'add file']);
       stage.rm('test.txt');
       stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('restores renamed files', async () => {
+      stage.writeFile('test.old', 'contents');
+      stage.git(['add', 'test.old']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.old');
+      stage.writeFile('test.new', 'contents');
+      stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);
       stage.prepare();

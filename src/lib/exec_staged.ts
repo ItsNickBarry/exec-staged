@@ -13,7 +13,9 @@ export const execStaged = async (
     await stage.exec(resolveConfig(tasks));
     return true;
   } catch (error) {
-    console.log(`🪲 Log saved to: ${stage.logger.outFile}`);
+    if (!options.quiet) {
+      console.log(`🪲 Log saved to: ${stage.logger.outFile}`);
+    }
     return false;
   }
 };

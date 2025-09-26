@@ -118,7 +118,7 @@ export class Stage {
     this.gitDir = this.git(['rev-parse', '--absolute-git-dir']);
     this.patchPath = path.resolve(this.gitDir, 'patch.diff');
 
-    this.git(['status', '--porcelain'])
+    this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
       .filter((f) => f.length)
       .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
@@ -211,6 +211,7 @@ export class Stage {
               .filter(([, s]) => s.match(new RegExp(`^[${diff}]`)))
               .map(([f]) => f),
             glob,
+            { dot: true },
           );
 
           if (files.length === 0) {
