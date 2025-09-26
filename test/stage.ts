@@ -366,14 +366,12 @@ describe('Stage', () => {
 
     it('interpolates files into command if command includes interpolation token', async () => {
       stage.writeFile('test.js');
-      stage.writeFile('subdirectory/test.js');
-      stage.git(['add', 'test.js', 'subdirectory/test.js']);
+      stage.git(['add', 'test.js']);
 
       stage.prepare();
       await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
 
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
-      assert.throws(() => stage.readFile('subdirectory/test.js'), /ENOENT/);
     });
 
     it('inerpolates old and new versions of renamed files separately', async () => {
@@ -446,6 +444,33 @@ describe('Stage', () => {
 
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
       assert.doesNotThrow(() => stage.readFile('test.ts'));
+    });
+
+    it('users default diff filter', async () => {
+      stage.writeFile('test-M.js', 'old contents');
+      stage.git(['add', 'test-M.js']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('test-A.js');
+      stage.writeFile('test-M.js', 'new contents');
+      stage.git(['add', 'test-A.js', 'test-M.js']);
+
+      stage.prepare();
+      await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
+
+      assert.throws(() => stage.readFile('test-A.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('test-M.js'), /ENOENT/);
+    });
+
+    it('uses default glob filter', async () => {
+      stage.writeFile('test.js');
+      stage.writeFile('subdirectory/test.js');
+      stage.git(['add', 'test.js', 'subdirectory/test.js']);
+
+      stage.prepare();
+      await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
+
+      assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('subdirectory/test.js'), /ENOENT/);
     });
 
     it('does not run task if command includes interpolation token and no files match', async () => {
