@@ -118,7 +118,7 @@ export class Stage {
     this.gitDir = this.git(['rev-parse', '--absolute-git-dir']);
     this.patchPath = path.resolve(this.gitDir, 'patch.diff');
 
-    this.git(['status', '--porcelain'])
+    this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
       .filter((f) => f.length)
       .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
