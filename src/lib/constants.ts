@@ -2,7 +2,7 @@ import pkg from '../../package.json' with { type: 'json' };
 import type { ExecStagedConfigEntry } from '../types.js';
 
 export const DEFAULT_CONFIG_ENTRY: Omit<ExecStagedConfigEntry, 'task'> = {
-  diff: 'ACMR',
+  diff: 'AM',
   glob: '**',
 };
 
