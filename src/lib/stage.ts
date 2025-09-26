@@ -211,6 +211,7 @@ export class Stage {
               .filter(([, s]) => s.match(new RegExp(`^[${diff}]`)))
               .map(([f]) => f),
             glob,
+            { dot: true },
           );
 
           if (files.length === 0) {
