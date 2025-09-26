@@ -464,13 +464,15 @@ describe('Stage', () => {
     it('uses default glob filter', async () => {
       stage.writeFile('test.js');
       stage.writeFile('subdirectory/test.js');
-      stage.git(['add', 'test.js', 'subdirectory/test.js']);
+      stage.writeFile('.test.js');
+      stage.git(['add', 'test.js', 'subdirectory/test.js', '.test.js']);
 
       stage.prepare();
       await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
 
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
       assert.throws(() => stage.readFile('subdirectory/test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('.test.js'), /ENOENT/);
     });
 
     it('does not run task if command includes interpolation token and no files match', async () => {
