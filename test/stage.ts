@@ -324,12 +324,14 @@ describe('Stage', () => {
 
     it('interpolates files into command if command includes interpolation token', async () => {
       stage.writeFile('test.js');
-      stage.git(['add', 'test.js']);
+      stage.writeFile('subdirectory/test.js');
+      stage.git(['add', 'test.js', 'subdirectory/test.js']);
 
       stage.prepare();
       await stage.run([{ ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES }]);
 
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('subdirectory/test.js'), /ENOENT/);
     });
 
     it('filters interpolated files with diff filter', async () => {
