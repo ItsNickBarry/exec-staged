@@ -74,4 +74,24 @@ describe('CLI', () => {
     assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
   });
+
+  it('loads config from file', async () => {
+    const stage = TestStage.create();
+    stage.writeFile(
+      'exec-staged.config.ts',
+      `export default ['${TASK_EXIT_1}'];`,
+    );
+
+    const child = child_process.spawn('node', [BIN], {
+      cwd: stage.cwd,
+    });
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 1);
+  });
 });
