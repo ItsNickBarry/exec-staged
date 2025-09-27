@@ -149,8 +149,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       stage.prepare();
@@ -246,8 +245,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       assert.equal(
@@ -378,8 +376,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       stage.prepare();
@@ -641,8 +638,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);
@@ -914,8 +910,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);
