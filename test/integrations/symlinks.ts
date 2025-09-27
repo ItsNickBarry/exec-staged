@@ -8,6 +8,15 @@ import { describe, it } from 'node:test';
 const BIN = path.resolve(import.meta.dirname, '../../dist/bin/cli.js');
 
 describe('symlinks', () => {
+  it('runs with symlinked staged files', async () => {
+    const stage = TestStage.create();
+    stage.writeFile('test.js', 'contents');
+    stage.symlink('test.js', 'symlink.js');
+    stage.git(['add', 'test.js', 'symlink.js']);
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), true);
+  });
+
   it('runs with symlinked config file', async () => {
     const stage = TestStage.create();
     stage.writeFile(
