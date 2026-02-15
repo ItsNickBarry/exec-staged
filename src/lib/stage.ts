@@ -72,7 +72,7 @@ export class Stage {
       )?.[1];
     } catch (error) {
       this.logger.log('⚠️ Git installation not found!');
-      throw error;
+      throw new Error('git installation not found');
     }
 
     if (!version || semver.lte(version, '2.13.0')) {
