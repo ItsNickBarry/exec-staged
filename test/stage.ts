@@ -51,7 +51,7 @@ describe('Stage', () => {
       assert.throws(() => stage.check(), /unexpected backup stash/);
     });
 
-    it('throws if backup stash from previous run is present', async () => {
+    it('throws if temporary commit from previous run is present', async () => {
       stage.git([
         'commit',
         '--allow-empty',
