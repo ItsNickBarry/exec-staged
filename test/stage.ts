@@ -374,7 +374,7 @@ describe('Stage', () => {
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
     });
 
-    it('inerpolates old and new versions of renamed files separately', async () => {
+    it('interpolates old and new versions of renamed files separately', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
@@ -446,7 +446,7 @@ describe('Stage', () => {
       assert.doesNotThrow(() => stage.readFile('test.ts'));
     });
 
-    it('users default diff filter', async () => {
+    it('uses default diff filter', async () => {
       stage.writeFile('test-M.js', 'old contents');
       stage.git(['add', 'test-M.js']);
       stage.git(['commit', '-m', 'add file']);
