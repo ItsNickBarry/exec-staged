@@ -19,3 +19,15 @@ export const execStaged = async (
     return false;
   }
 };
+
+export const recoverStaged = (cwd: string): boolean => {
+  const stage = new Stage(cwd);
+
+  try {
+    stage.recover();
+    return true;
+  } catch (error) {
+    console.log(`🪲 Log saved to: ${stage.logger.outFile}`);
+    return false;
+  }
+};
