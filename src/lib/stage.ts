@@ -19,9 +19,7 @@ export class Stage {
   protected readonly cwd: string;
   protected stashed: boolean = false;
   private readonly status: { [file: string]: string } = {};
-  private readonly mergeStatus: {
-    [file in (typeof MERGE_FILES)[number]]?: Buffer;
-  } = {};
+  private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private head?: string;
   private _gitDir?: string;
 
@@ -99,6 +97,18 @@ export class Stage {
     if (gitRootDirectory !== this.cwd) {
       this.logger.log('⚠️ Not in git root directory!');
       throw new Error('cwd is not a git repository root directory');
+    }
+
+    if (
+      MERGE_FILES.some((f) =>
+        fs.existsSync(path.resolve(this.gitDir, `${f}.bak`)),
+      )
+    ) {
+      this.logger.log('⚠️ Found unexpected merge status backup!');
+      this.logger.log(
+        'It must be left over from a previous failed run.  Remove it before proceeding.',
+      );
+      throw new Error('unexpected merge status backup');
     }
 
     if (this.indexOfBackupStash() !== -1) {
@@ -352,17 +362,16 @@ export class Stage {
     for (const mergeFile of MERGE_FILES) {
       const file = path.resolve(this.gitDir, mergeFile);
       if (fs.existsSync(file)) {
-        this.mergeStatus[mergeFile] = fs.readFileSync(file);
+        fs.copyFileSync(file, `${file}.bak`);
+        this.mergeStatus.push(mergeFile);
       }
     }
   }
 
   private restoreMergeStatus() {
-    for (const mergeFile of Object.keys(
-      this.mergeStatus,
-    ) as (keyof typeof this.mergeStatus)[]) {
-      const contents = this.mergeStatus[mergeFile]!;
-      fs.writeFileSync(path.resolve(this.gitDir, mergeFile), contents);
+    for (const mergeFile of this.mergeStatus) {
+      const file = path.resolve(this.gitDir, mergeFile);
+      fs.renameSync(`${file}.bak`, file);
     }
   }
 

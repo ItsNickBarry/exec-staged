@@ -2,6 +2,7 @@ import {
   BACKUP_STASH_MESSAGE,
   DEFAULT_CONFIG_ENTRY,
   INTERPOLATION_IDENTIFIER,
+  MERGE_FILES,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
@@ -79,6 +80,12 @@ describe('Stage', () => {
       stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
       assert.throws(() => stage.check(), /unexpected backup stash/);
+    });
+
+    it('throws if merge status backup from previous run is present', async () => {
+      stage.writeFile(`.git/${MERGE_FILES[0]}.bak`);
+
+      assert.throws(() => stage.check(), /unexpected merge status backup/);
     });
 
     it('throws if temporary commit from previous run is present', async () => {
