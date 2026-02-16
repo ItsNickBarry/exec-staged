@@ -39,6 +39,10 @@ export class TestStage extends Stage {
     fs.writeFileSync(absolutePath, contents);
   }
 
+  public chmod(relativePath: string, mode: fs.Mode) {
+    fs.chmodSync(this.resolve(relativePath), mode);
+  }
+
   public mkdir(relativePath: string) {
     fs.mkdirSync(this.resolve(relativePath), { recursive: true });
   }

@@ -10,7 +10,7 @@ Run commands against files staged in git, ignoring unstaged changes and untracke
 
 ### How it Works
 
-1. Unstaged changes and untracked files are hidden in a git stash. This inludes unstaged deletions, which are temporarily restored.
+1. Unstaged changes and untracked files are hidden in a git stash. This includes unstaged deletions, which are temporarily restored.
 2. User-configured tasks are run, with staged files passed in according to configuration.
 3. Any changes made by tasks are added to the git index. This includes additions and deletions.
 4. The stashed changes are restored.
@@ -131,7 +131,7 @@ Commands which include the `$FILES` token are only run if staged files are found
 
 File filtering can be customized.
 
-To filter files by name, add a `glob` filter (defaults to `'*'`):
+To filter files by name, add a `glob` filter (defaults to `'**'`):
 
 ```typescript
 { task: 'prettier --write $FILES', glob: '*.{js,ts,json,md}' }

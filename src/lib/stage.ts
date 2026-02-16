@@ -23,8 +23,15 @@ export class Stage {
     [file in (typeof MERGE_FILES)[number]]?: Buffer;
   } = {};
   private head?: string;
-  private patchPath?: string;
-  private gitDir?: string;
+  private _gitDir?: string;
+
+  private get gitDir(): string {
+    return (this._gitDir ??= this.git(['rev-parse', '--absolute-git-dir']));
+  }
+
+  private get patchPath(): string {
+    return path.resolve(this.gitDir, 'patch.diff');
+  }
 
   constructor(cwd: string, options: StageOptions = {}) {
     this.cwd = cwd;
@@ -72,7 +79,7 @@ export class Stage {
       )?.[1];
     } catch (error) {
       this.logger.log('⚠️ Git installation not found!');
-      throw error;
+      throw new Error('git installation not found');
     }
 
     if (!version || semver.lte(version, '2.13.0')) {
@@ -102,7 +109,9 @@ export class Stage {
       throw new Error('unexpected backup stash');
     }
 
-    if (this.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE)) {
+    if (
+      this.git(['log', '--grep', STAGED_CHANGES_COMMIT_MESSAGE, '--format=%s'])
+    ) {
       this.logger.log('⚠️ Found unexpected temporary commit!');
       this.logger.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
@@ -115,8 +124,6 @@ export class Stage {
     this.logger.log(stageLifecycleMessages.prepare);
 
     this.head = this.git(['rev-parse', 'HEAD']);
-    this.gitDir = this.git(['rev-parse', '--absolute-git-dir']);
-    this.patchPath = path.resolve(this.gitDir, 'patch.diff');
 
     this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
@@ -269,7 +276,7 @@ export class Stage {
         '--unidiff-zero',
         '--whitespace=nowarn',
         '--3way',
-        this.patchPath!,
+        this.patchPath,
       ]);
 
       // unstaged deletions are not included in the patch and must be handled
@@ -287,7 +294,7 @@ export class Stage {
       this.git(['reset', '--soft', this.head!]);
 
       // clean up
-      fs.rmSync(this.patchPath!);
+      fs.rmSync(this.patchPath);
       this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
@@ -343,7 +350,7 @@ export class Stage {
 
   private backupMergeStatus() {
     for (const mergeFile of MERGE_FILES) {
-      const file = path.resolve(this.gitDir!, mergeFile);
+      const file = path.resolve(this.gitDir, mergeFile);
       if (fs.existsSync(file)) {
         this.mergeStatus[mergeFile] = fs.readFileSync(file);
       }
@@ -355,7 +362,7 @@ export class Stage {
       this.mergeStatus,
     ) as (keyof typeof this.mergeStatus)[]) {
       const contents = this.mergeStatus[mergeFile]!;
-      fs.writeFileSync(path.resolve(this.gitDir!, mergeFile), contents);
+      fs.writeFileSync(path.resolve(this.gitDir, mergeFile), contents);
     }
   }
 

@@ -6,6 +6,7 @@ import {
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
+import { execaSync } from 'execa';
 import assert from 'node:assert';
 import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
@@ -18,8 +19,37 @@ describe('Stage', () => {
   });
 
   describe('::check', () => {
-    // TODO: test git not present
-    // TODO: test git version unsupported
+    it('throws if git is not present', async () => {
+      // override git to use an empty PATH so the git binary cannot be found
+      stage.git = (args: string[]) => {
+        const { stdout } = execaSync({ cwd: stage.cwd, env: { PATH: '' } })(
+          'git',
+          args,
+        );
+        return stdout;
+      };
+
+      assert.throws(() => stage.check(), /git installation not found/);
+    });
+
+    it('throws if git version is unsupported', async () => {
+      stage.writeFile('.fake-bin/git', '#!/bin/sh\necho "git version 2.12.0"');
+      stage.chmod('.fake-bin/git', 0o755);
+
+      // override git to prefer the fake script that reports an old version
+      stage.git = (args: string[]) => {
+        const { stdout } = execaSync({
+          cwd: stage.cwd,
+          env: {
+            ...process.env,
+            PATH: `${path.resolve(stage.cwd, '.fake-bin')}:${process.env.PATH}`,
+          },
+        })('git', args);
+        return stdout;
+      };
+
+      assert.throws(() => stage.check(), /unsupported git version/);
+    });
 
     it('throws if cwd does not exist', async () => {
       stage.rm('.');
@@ -51,7 +81,7 @@ describe('Stage', () => {
       assert.throws(() => stage.check(), /unexpected backup stash/);
     });
 
-    it('throws if backup stash from previous run is present', async () => {
+    it('throws if temporary commit from previous run is present', async () => {
       stage.git([
         'commit',
         '--allow-empty',
@@ -372,7 +402,7 @@ describe('Stage', () => {
       assert.throws(() => stage.readFile('test.js'), /ENOENT/);
     });
 
-    it('inerpolates old and new versions of renamed files separately', async () => {
+    it('interpolates old and new versions of renamed files separately', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
@@ -443,7 +473,7 @@ describe('Stage', () => {
       assert.doesNotThrow(() => stage.readFile('test.ts'));
     });
 
-    it('users default diff filter', async () => {
+    it('uses default diff filter', async () => {
       stage.writeFile('test-M.js', 'old contents');
       stage.git(['add', 'test-M.js']);
       stage.git(['commit', '-m', 'add file']);
