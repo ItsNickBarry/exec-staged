@@ -53,6 +53,7 @@ describe('symlinks', () => {
     const external = TestStage.create();
     const externalGitDir = path.resolve(external.cwd, '.git-external');
 
+    // raw fs calls are needed because the target is outside the stage's cwd
     fs.renameSync(path.resolve(stage.cwd, '.git'), externalGitDir);
     fs.symlinkSync(externalGitDir, path.resolve(stage.cwd, '.git'));
 
