@@ -111,7 +111,7 @@ export class Stage {
     );
 
     if (
-      path.relative(rawGitDir, this.gitDir).startsWith('..') &&
+      rawGitDir !== this.gitDir &&
       !path.relative(this.cwd, this.gitDir).startsWith('..')
     ) {
       this.logger.log(
