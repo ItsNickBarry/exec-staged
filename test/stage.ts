@@ -1,8 +1,8 @@
 import {
+  ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   DEFAULT_CONFIG_ENTRY,
   INTERPOLATION_IDENTIFIER,
-  MERGE_FILES,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
@@ -82,10 +82,10 @@ describe('Stage', () => {
       assert.throws(() => stage.check(), /unexpected backup stash/);
     });
 
-    it('throws if merge status backup from previous run is present', async () => {
-      stage.writeFile(`.git/${MERGE_FILES[0]}.bak`);
+    it('throws if artifacts directory from previous run is present', async () => {
+      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
 
-      assert.throws(() => stage.check(), /unexpected merge status backup/);
+      assert.throws(() => stage.check(), /unexpected artifacts directory/);
     });
 
     it('throws if temporary commit from previous run is present', async () => {

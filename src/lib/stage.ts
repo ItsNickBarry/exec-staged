@@ -1,5 +1,6 @@
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
+  ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   INTERPOLATION_IDENTIFIER,
   MERGE_FILES,
@@ -27,8 +28,12 @@ export class Stage {
     return (this._gitDir ??= this.git(['rev-parse', '--absolute-git-dir']));
   }
 
+  private get artifactsDir(): string {
+    return path.resolve(this.gitDir, ARTIFACTS_DIRECTORY);
+  }
+
   private get patchPath(): string {
-    return path.resolve(this.gitDir, 'patch.diff');
+    return path.resolve(this.artifactsDir, 'patch.diff');
   }
 
   constructor(cwd: string, options: StageOptions = {}) {
@@ -99,16 +104,12 @@ export class Stage {
       throw new Error('cwd is not a git repository root directory');
     }
 
-    if (
-      MERGE_FILES.some((f) =>
-        fs.existsSync(path.resolve(this.gitDir, `${f}.bak`)),
-      )
-    ) {
-      this.logger.log('⚠️ Found unexpected merge status backup!');
+    if (fs.existsSync(this.artifactsDir)) {
+      this.logger.log('⚠️ Found unexpected artifacts directory!');
       this.logger.log(
         'It must be left over from a previous failed run.  Remove it before proceeding.',
       );
-      throw new Error('unexpected merge status backup');
+      throw new Error('unexpected artifacts directory');
     }
 
     if (this.indexOfBackupStash() !== -1) {
@@ -142,6 +143,8 @@ export class Stage {
 
     // if there are no files in index or working tree, do not attempt to stash
     if (Object.keys(this.status).length === 0) return;
+
+    fs.mkdirSync(this.artifactsDir);
 
     try {
       this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
@@ -304,14 +307,13 @@ export class Stage {
       this.git(['reset', '--soft', this.head!]);
 
       // clean up
-      fs.rmSync(this.patchPath);
+      this.restoreMergeStatus();
+      fs.rmSync(this.artifactsDir, { recursive: true });
       this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
     }
-
-    this.restoreMergeStatus();
   }
 
   protected revert() {
@@ -342,6 +344,7 @@ export class Stage {
       this.git(['stash', 'apply', '--index', stash!]);
       this.git(['stash', 'drop', stash!]);
       this.restoreMergeStatus();
+      fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
       this.logger.log('⚠️ Failed to restore state from backup stash!');
       throw error;
@@ -360,9 +363,9 @@ export class Stage {
 
   private backupMergeStatus() {
     for (const mergeFile of MERGE_FILES) {
-      const file = path.resolve(this.gitDir, mergeFile);
-      if (fs.existsSync(file)) {
-        fs.copyFileSync(file, `${file}.bak`);
+      const src = path.resolve(this.gitDir, mergeFile);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.resolve(this.artifactsDir, mergeFile));
         this.mergeStatus.push(mergeFile);
       }
     }
@@ -370,8 +373,10 @@ export class Stage {
 
   private restoreMergeStatus() {
     for (const mergeFile of this.mergeStatus) {
-      const file = path.resolve(this.gitDir, mergeFile);
-      fs.renameSync(`${file}.bak`, file);
+      fs.renameSync(
+        path.resolve(this.artifactsDir, mergeFile),
+        path.resolve(this.gitDir, mergeFile),
+      );
     }
   }
 
