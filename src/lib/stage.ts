@@ -107,7 +107,7 @@ export class Stage {
     if (fs.existsSync(this.artifactsDir)) {
       this.logger.log('⚠️ Found unexpected artifacts directory!');
       this.logger.log(
-        'It must be left over from a previous failed run.  Remove it before proceeding.',
+        'It must be left over from a previous failed run.  Run `exec-staged recover` to restore your repository.',
       );
       throw new Error('unexpected artifacts directory');
     }
@@ -115,7 +115,7 @@ export class Stage {
     if (this.indexOfBackupStash() !== -1) {
       this.logger.log('⚠️ Found unexpected backup stash!');
       this.logger.log(
-        'It must be left over from a previous failed run.  Remove it before proceeding.',
+        'It must be left over from a previous failed run.  Run `exec-staged recover` to restore your repository.',
       );
       throw new Error('unexpected backup stash');
     }
