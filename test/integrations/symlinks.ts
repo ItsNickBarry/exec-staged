@@ -2,6 +2,7 @@ import { TASK_EXIT_0, TASK_EXIT_1 } from '../fixtures/tasks';
 import { TestStage } from '../fixtures/test_stage';
 import assert from 'node:assert';
 import child_process from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -38,10 +39,22 @@ describe('symlinks', () => {
     assert.equal(child.exitCode, 1);
   });
 
-  it('runs with symlinked git directory', async () => {
+  it('throws with symlinked git directory pointing inside repository', async () => {
     const stage = TestStage.create();
     stage.rename('.git', '.git-symlinked');
     stage.symlink('.git-symlinked', '.git');
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), false);
+  });
+
+  it('runs with symlinked git directory pointing outside repository', async () => {
+    const stage = TestStage.create();
+    // use a second stage's tmp dir as an external location for the git dir
+    const external = TestStage.create();
+    const externalGitDir = path.resolve(external.cwd, '.git-external');
+
+    fs.renameSync(path.resolve(stage.cwd, '.git'), externalGitDir);
+    fs.symlinkSync(externalGitDir, path.resolve(stage.cwd, '.git'));
 
     assert.equal(await stage.execStaged([TASK_EXIT_0]), true);
   });

@@ -101,6 +101,23 @@ export class Stage {
       throw new Error('cwd is not a git repository root directory');
     }
 
+    const rawGitDir = path.resolve(
+      this.cwd,
+      this.git(['rev-parse', '--git-dir']),
+    );
+
+    if (
+      path.relative(rawGitDir, this.gitDir).startsWith('..') &&
+      !path.relative(this.cwd, this.gitDir).startsWith('..')
+    ) {
+      this.logger.log(
+        '⚠️ Git directory is a symlink pointing to a location within the repository!',
+      );
+      throw new Error(
+        'git directory is a symlink pointing to a location within the repository',
+      );
+    }
+
     if (this.indexOfBackupStash() !== -1) {
       this.logger.log('⚠️ Found unexpected backup stash!');
       this.logger.log(

@@ -91,6 +91,16 @@ describe('Stage', () => {
 
       assert.throws(() => stage.check(), /unexpected temporary commit/);
     });
+
+    it('throws if git directory is a symlink pointing inside repository', async () => {
+      stage.rename('.git', '.git-symlinked');
+      stage.symlink('.git-symlinked', '.git');
+
+      assert.throws(
+        () => stage.check(),
+        /git directory is a symlink pointing to a location within the repository/,
+      );
+    });
   });
 
   describe('::prepare', () => {
