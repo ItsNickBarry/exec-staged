@@ -9,24 +9,19 @@ import { cosmiconfig } from 'cosmiconfig';
 
 export const loadConfig = async (
   cwd: string,
-  quiet: boolean = false,
 ): Promise<ExecStagedUserConfig> => {
   const configResult = await cosmiconfig(pkg.name).search(cwd);
 
   if (configResult) {
     const { config, filepath } = configResult;
 
-    if (!quiet) {
-      console.log(`Config loaded from ${filepath}`);
-    }
+    console.log(`Config loaded from ${filepath}`);
 
     validateUserConfig(config);
 
     return config;
   } else {
-    if (!quiet) {
-      console.log('No config found');
-    }
+    console.log('No config found');
     return [];
   }
 };

@@ -17,7 +17,7 @@ const args = program.args;
 
 const cwd = path.resolve(options.cwd ?? '');
 
-const tasks = args.length ? args : await loadConfig(cwd, options.quiet);
+const tasks = args.length ? args : await loadConfig(cwd);
 
 const result = await execStaged(cwd, tasks, options);
 
