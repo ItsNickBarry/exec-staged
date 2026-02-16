@@ -1,5 +1,4 @@
 import {
-  ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
