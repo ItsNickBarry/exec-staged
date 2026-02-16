@@ -23,11 +23,14 @@ export class Stage {
     [file in (typeof MERGE_FILES)[number]]?: Buffer;
   } = {};
   private head?: string;
-  private patchPath?: string;
   private _gitDir?: string;
 
   private get gitDir(): string {
     return (this._gitDir ??= this.git(['rev-parse', '--absolute-git-dir']));
+  }
+
+  private get patchPath(): string {
+    return path.resolve(this.gitDir, 'patch.diff');
   }
 
   constructor(cwd: string, options: StageOptions = {}) {
@@ -121,7 +124,6 @@ export class Stage {
     this.logger.log(stageLifecycleMessages.prepare);
 
     this.head = this.git(['rev-parse', 'HEAD']);
-    this.patchPath = path.resolve(this.gitDir, 'patch.diff');
 
     this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
@@ -274,7 +276,7 @@ export class Stage {
         '--unidiff-zero',
         '--whitespace=nowarn',
         '--3way',
-        this.patchPath!,
+        this.patchPath,
       ]);
 
       // unstaged deletions are not included in the patch and must be handled
@@ -292,7 +294,7 @@ export class Stage {
       this.git(['reset', '--soft', this.head!]);
 
       // clean up
-      fs.rmSync(this.patchPath!);
+      fs.rmSync(this.patchPath);
       this.git(['stash', 'drop', stash]);
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
