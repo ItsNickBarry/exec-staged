@@ -423,12 +423,12 @@ export class Stage {
       this.logger.log('➡️ Found artifacts directory, cleaning up...');
 
       for (const mergeFile of MERGE_FILES) {
-        if (fs.existsSync(path.resolve(this.artifactsDir, mergeFile))) {
-          this.mergeStatus.push(mergeFile);
+        const src = path.resolve(this.artifactsDir, mergeFile);
+        if (fs.existsSync(src)) {
+          fs.renameSync(src, path.resolve(this.gitDir, mergeFile));
         }
       }
 
-      this.restoreMergeStatus();
       fs.rmSync(this.artifactsDir, { recursive: true });
     }
   }
