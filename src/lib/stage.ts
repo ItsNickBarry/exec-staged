@@ -101,6 +101,10 @@ export class Stage {
       throw new Error('cwd is not a git repository root directory');
     }
 
+    // --absolute-git-dir resolves symlinks, --git-dir does not; if the
+    // resolved path diverges from the raw path and lands inside the repo,
+    // the git dir is a symlink whose target would be stashed (and removed)
+    // by git stash --include-untracked, breaking all subsequent operations
     const rawGitDir = path.resolve(
       this.cwd,
       this.git(['rev-parse', '--git-dir']),
