@@ -395,4 +395,41 @@ export class Stage {
 
     return `stash@{${index}}`;
   }
+
+  public recover() {
+    const stashIndex = this.indexOfBackupStash();
+    const stashFound = stashIndex !== -1;
+    const artifactsFound = fs.existsSync(this.artifactsDir);
+
+    if (!stashFound && !artifactsFound) {
+      this.logger.log('➡️ Nothing to recover.');
+      return;
+    }
+
+    if (stashFound) {
+      const stash = `stash@{${stashIndex}}`;
+
+      this.logger.log('➡️ Found backup stash, restoring...');
+
+      const head = this.git(['rev-parse', `${stash}^1`]);
+
+      this.git(['add', '-A']);
+      this.git(['reset', '--hard', head]);
+      this.git(['stash', 'apply', '--index', stash]);
+      this.git(['stash', 'drop', stash]);
+    }
+
+    if (artifactsFound) {
+      this.logger.log('➡️ Found artifacts directory, cleaning up...');
+
+      for (const mergeFile of MERGE_FILES) {
+        if (fs.existsSync(path.resolve(this.artifactsDir, mergeFile))) {
+          this.mergeStatus.push(mergeFile);
+        }
+      }
+
+      this.restoreMergeStatus();
+      fs.rmSync(this.artifactsDir, { recursive: true });
+    }
+  }
 }
