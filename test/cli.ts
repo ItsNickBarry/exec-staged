@@ -1,4 +1,5 @@
 import {
+  ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
@@ -93,5 +94,45 @@ describe('CLI', () => {
     await closed;
 
     assert.equal(child.exitCode, 1);
+  });
+
+  it('recovers from failed run', async () => {
+    stage.writeFile('test.txt', 'staged contents');
+    stage.git(['add', 'test.txt']);
+    stage.writeFile('test.txt', 'unstaged contents');
+
+    const oldStatus = stage.git(['status', '-z']);
+
+    stage.prepare();
+
+    const child = child_process.spawn('node', [BIN, 'recover'], {
+      cwd: stage.cwd,
+    });
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 0);
+
+    const newStatus = stage.git(['status', '-z']);
+    assert.equal(newStatus, oldStatus);
+    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+  });
+
+  it('returns exit code 0 when nothing to recover', async () => {
+    const child = child_process.spawn('node', [BIN, 'recover'], {
+      cwd: stage.cwd,
+    });
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 0);
   });
 });
