@@ -59,4 +59,58 @@ describe('symlinks', () => {
 
     assert.equal(await stage.execStaged([TASK_EXIT_0]), true);
   });
+
+  it('throws with chained symlinked git directory pointing inside then inside repository', async () => {
+    const stage = TestStage.create();
+    // .git → .git-intermediate (inside) → .git-target (inside)
+    stage.rename('.git', '.git-target');
+    stage.symlink('.git-target', '.git-intermediate');
+    stage.symlink('.git-intermediate', '.git');
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), false);
+  });
+
+  it('throws with chained symlinked git directory pointing inside then outside repository', async () => {
+    const stage = TestStage.create();
+    const external = TestStage.create();
+    const gitDirTarget = path.resolve(external.cwd, '.git-target');
+
+    // .git → .git-intermediate (inside) → .git-target (outside)
+    fs.renameSync(path.resolve(stage.cwd, '.git'), gitDirTarget);
+    fs.symlinkSync(gitDirTarget, path.resolve(stage.cwd, '.git-intermediate'));
+    fs.symlinkSync(
+      path.resolve(stage.cwd, '.git-intermediate'),
+      path.resolve(stage.cwd, '.git'),
+    );
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), false);
+  });
+
+  it('throws with chained symlinked git directory pointing outside then inside repository', async () => {
+    const stage = TestStage.create();
+    const external = TestStage.create();
+    const gitDirIntermediate = path.resolve(external.cwd, '.git-intermediate');
+
+    // .git → .git-intermediate (outside) → .git-target (inside)
+    stage.rename('.git', '.git-target');
+    fs.symlinkSync(path.resolve(stage.cwd, '.git-target'), gitDirIntermediate);
+    fs.symlinkSync(gitDirIntermediate, path.resolve(stage.cwd, '.git'));
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), false);
+  });
+
+  it('runs with chained symlinked git directory pointing outside then outside repository', async () => {
+    const stage = TestStage.create();
+    const external1 = TestStage.create();
+    const external2 = TestStage.create();
+    const gitDirTarget = path.resolve(external1.cwd, '.git-target');
+    const gitDirIntermediate = path.resolve(external2.cwd, '.git-intermediate');
+
+    // .git → .git-intermediate (outside) → .git-target (outside)
+    fs.renameSync(path.resolve(stage.cwd, '.git'), gitDirTarget);
+    fs.symlinkSync(gitDirTarget, gitDirIntermediate);
+    fs.symlinkSync(gitDirIntermediate, path.resolve(stage.cwd, '.git'));
+
+    assert.equal(await stage.execStaged([TASK_EXIT_0]), true);
+  });
 });
