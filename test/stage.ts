@@ -1,4 +1,5 @@
 import {
+  ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   DEFAULT_CONFIG_ENTRY,
   INTERPOLATION_IDENTIFIER,
@@ -79,6 +80,12 @@ describe('Stage', () => {
       stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
 
       assert.throws(() => stage.check(), /unexpected backup stash/);
+    });
+
+    it('throws if artifacts directory from previous run is present', async () => {
+      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
+
+      assert.throws(() => stage.check(), /unexpected artifacts directory/);
     });
 
     it('throws if temporary commit from previous run is present', async () => {
