@@ -247,3 +247,65 @@ describe('execStaged', () => {
     assert.equal(newStatus, oldStatus);
   });
 });
+
+describe('recoverStaged', () => {
+  let stage: TestStage;
+
+  beforeEach(async () => {
+    stage = TestStage.create();
+  });
+
+  it('returns true when nothing to recover', async () => {
+    const result = stage.recoverStaged();
+
+    assert.equal(result, true);
+  });
+
+  it('returns true and restores state from backup stash', async () => {
+    stage.writeFile('test.txt', 'staged contents');
+    stage.git(['add', 'test.txt']);
+    stage.writeFile('test.txt', 'unstaged contents');
+
+    const oldStatus = stage.git(['status', '-z']);
+
+    stage.prepare();
+
+    const result = stage.recoverStaged();
+
+    assert.equal(result, true);
+
+    const newStatus = stage.git(['status', '-z']);
+    assert.equal(newStatus, oldStatus);
+    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+  });
+
+  it('returns true and restores merge status', async () => {
+    const theirBranch = 'their-branch';
+
+    stage.git(['checkout', '-b', theirBranch]);
+    stage.writeFile('test.txt', 'incoming contents');
+    stage.git(['add', 'test.txt']);
+    stage.git(['commit', '-m', 'add file']);
+
+    stage.git(['checkout', '-']);
+    stage.writeFile('test.txt', 'current contents');
+    stage.git(['add', 'test.txt']);
+    stage.git(['commit', '-m', 'add file']);
+
+    assert.throws(() => stage.git(['merge', theirBranch]));
+
+    stage.writeFile('test.txt', 'resolved contents');
+    stage.git(['add', 'test.txt']);
+
+    const oldStatus = stage.git(['status']);
+
+    stage.prepare();
+
+    const result = stage.recoverStaged();
+
+    assert.equal(result, true);
+
+    const newStatus = stage.git(['status']);
+    assert.equal(newStatus, oldStatus);
+  });
+});

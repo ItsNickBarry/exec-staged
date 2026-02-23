@@ -1,5 +1,5 @@
 import pkg from '../../package.json';
-import { execStaged } from '../../src/lib/exec_staged.js';
+import { execStaged, recoverStaged } from '../../src/lib/exec_staged.js';
 import { spawnSync } from '../../src/lib/spawn.js';
 import { Stage } from '../../src/lib/stage.js';
 import type {
@@ -23,6 +23,7 @@ export class TestStage extends Stage {
   declare public run: (tasks: ExecStagedConfig) => Promise<void>;
   declare public merge: () => void;
   declare public revert: () => void;
+  declare public recover: () => void;
   declare public git: (args: string[]) => string;
 
   constructor(cwd: string) {
@@ -53,6 +54,10 @@ export class TestStage extends Stage {
 
   public async execStaged(tasks: ExecStagedUserConfig): Promise<boolean> {
     return await execStaged(this.cwd, tasks, TEST_STAGE_OPTIONS);
+  }
+
+  public recoverStaged(): boolean {
+    return recoverStaged(this.cwd);
   }
 
   public spawnSync(task: string) {

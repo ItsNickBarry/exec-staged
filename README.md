@@ -155,21 +155,15 @@ Before running any potentially destructive scripts, `exec-staged` stores all out
 
 ### Recovery
 
-If `exec-staged` fails to exit safely, such as due to power loss or if its process is killed via `SIGKILL`, its backup stash should still be present.
-
-To verify, run `git log` and look for a stash with the message `💾 exec-staged backup stash`. It should be the most recent stash. If it isn't, one of your tasks probably created a stash for some reason. This is very unlikely. Remove any such stashes before proceeding.
-
-`exec-staged` also creates a short-lived temporary commit with the message `💾 exec-staged staged changes`. If it's present, it can be removed with `git reset --hard HEAD~1`.
-
-The following commands should return your repository to its original state:
+If `exec-staged` fails to exit safely, such as due to power loss or if its process is killed via `SIGKILL`, run the recovery tool to restore your repository to its original state:
 
 ```bash
-git add -A
-git reset --hard HEAD
-git stash pop --index
+npx exec-staged recover
 ```
 
-To prevent data loss, `exec-staged` will not run if a stash or commit from a previous run is present.
+This will automatically find and apply the backup stash, restore any merge metadata, and clean up leftover artifacts.
+
+To prevent data loss, `exec-staged` will not run if artifacts from a previous run are present.
 
 ## See Also
 

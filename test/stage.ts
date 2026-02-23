@@ -1042,4 +1042,122 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'old contents');
     });
   });
+
+  describe('::recover', () => {
+    it('does nothing if no artifacts are present', async () => {
+      stage.writeFile('staged.txt', 'staged');
+      stage.git(['add', 'staged.txt']);
+      stage.writeFile('tracked.txt', 'original');
+      stage.git(['add', 'tracked.txt']);
+      stage.git(['commit', '-m', 'add tracked file']);
+      stage.writeFile('tracked.txt', 'modified');
+      stage.writeFile('untracked.txt', 'untracked');
+
+      const oldStatus = stage.git(['status', '-z']);
+
+      stage.recover();
+
+      const newStatus = stage.git(['status', '-z']);
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('restores state from backup stash', async () => {
+      stage.writeFile('test.txt', 'staged contents');
+      stage.git(['add', 'test.txt']);
+      stage.writeFile('test.txt', 'unstaged contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+
+      stage.prepare();
+      stage.recover();
+
+      const newStatus = stage.git(['status', '-z']);
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'unstaged contents');
+    });
+
+    it('restores state from backup stash with temporary commit present', async () => {
+      stage.writeFile('test.txt', 'staged contents');
+      stage.git(['add', 'test.txt']);
+      stage.writeFile('test.txt', 'unstaged contents');
+
+      const oldStatus = stage.git(['status', '-z']);
+
+      stage.prepare();
+
+      stage.git(['add', '-A']);
+      stage.git([
+        'commit',
+        '--allow-empty',
+        '--no-verify',
+        '-m',
+        STAGED_CHANGES_COMMIT_MESSAGE,
+      ]);
+
+      stage.recover();
+
+      const newStatus = stage.git(['status', '-z']);
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'unstaged contents');
+      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
+    });
+
+    it('removes artifacts directory', async () => {
+      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
+      stage.writeFile(`.git/${ARTIFACTS_DIRECTORY}/patch.diff`);
+
+      stage.recover();
+
+      assert.doesNotThrow(() => stage.check());
+    });
+
+    it('restores merge status files from artifacts directory', async () => {
+      const theirBranch = 'their-branch';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('test.txt', 'incoming contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', 'current contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      assert.throws(() => stage.git(['merge', theirBranch]));
+
+      stage.writeFile('test.txt', 'resolved contents');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status']);
+
+      stage.prepare();
+
+      // simulate failure during revert after stash drop but before merge restore
+      const stashIndex = stage
+        .git(['stash', 'list'])
+        .split('\n')
+        .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
+      const stash = `stash@{${stashIndex}}`;
+      stage.git(['add', '-A']);
+      stage.git(['reset', '--hard', 'HEAD']);
+      stage.git(['stash', 'apply', '--index', stash]);
+      stage.git(['stash', 'drop', stash]);
+
+      stage.recover();
+
+      const newStatus = stage.git(['status']);
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('drops backup stash', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      stage.prepare();
+      stage.recover();
+
+      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    });
+  });
 });
