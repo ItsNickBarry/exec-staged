@@ -98,6 +98,16 @@ describe('Stage', () => {
 
       assert.throws(() => stage.check(), /unexpected temporary commit/);
     });
+
+    it('throws if git directory is a symlink pointing inside repository', async () => {
+      stage.rename('.git', '.git-symlinked');
+      stage.symlink('.git-symlinked', '.git');
+
+      assert.throws(
+        () => stage.check(),
+        /git directory is a symlink pointing to a location within the repository/,
+      );
+    });
   });
 
   describe('::prepare', () => {
@@ -186,8 +196,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       stage.prepare();
@@ -283,8 +292,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       assert.equal(
@@ -415,8 +423,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       stage.prepare();
@@ -678,8 +685,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);
@@ -951,8 +957,7 @@ describe('Stage', () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
-      stage.rm('test.old');
-      stage.writeFile('test.new', 'contents');
+      stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
 
       const oldStatus = stage.git(['status', '-z']);

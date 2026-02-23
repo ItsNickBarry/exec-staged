@@ -104,6 +104,31 @@ export class Stage {
       throw new Error('cwd is not a git repository root directory');
     }
 
+    // --absolute-git-dir resolves symlinks, --git-dir does not; if they
+    // differ, .git involves symlinks; walk the chain and reject if any
+    // target is inside the repo, because git stash --include-untracked
+    // would stash (and remove) it, breaking all subsequent operations
+    let gitDirPath = path.resolve(
+      this.cwd,
+      this.git(['rev-parse', '--git-dir']),
+    );
+
+    while (fs.lstatSync(gitDirPath).isSymbolicLink()) {
+      // readlink may return a relative path, so resolve against the
+      // symlink's parent directory to get an absolute path
+      const target = fs.readlinkSync(gitDirPath);
+      gitDirPath = path.resolve(path.dirname(gitDirPath), target);
+
+      if (!path.relative(this.cwd, gitDirPath).startsWith('..')) {
+        this.logger.log(
+          '⚠️ Git directory is a symlink pointing to a location within the repository!',
+        );
+        throw new Error(
+          'git directory is a symlink pointing to a location within the repository',
+        );
+      }
+    }
+
     if (fs.existsSync(this.artifactsDir)) {
       this.logger.log('⚠️ Found unexpected artifacts directory!');
       this.logger.log(
