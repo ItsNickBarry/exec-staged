@@ -519,6 +519,36 @@ describe('Stage', () => {
       assert.throws(() => stage.readFile('.test.js'), /ENOENT/);
     });
 
+    it('matches files in subdirectories when glob has no path separator (matchBase)', async () => {
+      stage.writeFile('test.js');
+      stage.writeFile('src/test.js');
+      stage.writeFile('src/deep/test.js');
+      stage.git(['add', 'test.js', 'src/test.js', 'src/deep/test.js']);
+
+      stage.prepare();
+      await stage.run([
+        { ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES, glob: '*.js' },
+      ]);
+
+      assert.throws(() => stage.readFile('test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('src/test.js'), /ENOENT/);
+      assert.throws(() => stage.readFile('src/deep/test.js'), /ENOENT/);
+    });
+
+    it('does not match files in subdirectories when glob has path separator', async () => {
+      stage.writeFile('test.js');
+      stage.writeFile('src/test.js');
+      stage.git(['add', 'test.js', 'src/test.js']);
+
+      stage.prepare();
+      await stage.run([
+        { ...DEFAULT_CONFIG_ENTRY, task: TASK_RM_FILES, glob: 'src/*.js' },
+      ]);
+
+      assert.doesNotThrow(() => stage.readFile('test.js'));
+      assert.throws(() => stage.readFile('src/test.js'), /ENOENT/);
+    });
+
     it('does not run task if command includes interpolation token and no files match', async () => {
       await assert.doesNotReject(async () =>
         stage.run([
