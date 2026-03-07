@@ -256,7 +256,11 @@ export class Stage {
               .filter(([, s]) => s.match(new RegExp(`^[${diff}]`)))
               .map(([f]) => f),
             glob,
-            { dot: true },
+            {
+              dot: true,
+              // match filenames in any directory when glob has no path separators
+              matchBase: !glob.includes('/'),
+            },
           );
 
           if (files.length === 0) {
