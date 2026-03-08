@@ -1,6 +1,6 @@
 {
   "name": "exec-staged",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Run commands against the current git index",
   "keywords": [
     "git",
