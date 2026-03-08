@@ -288,7 +288,7 @@ describe('Stage', () => {
       assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
     });
 
-    it('does not hide renamed files', async () => {
+    it('does not hide staged renames', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
@@ -711,7 +711,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('maintains renamed files', async () => {
+    it('maintains staged renames', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
@@ -725,8 +725,6 @@ describe('Stage', () => {
 
       assert.equal(newStatus, oldStatus);
     });
-
-    it('todo');
 
     it('merges unstaged deletions', async () => {
       stage.writeFile('test.txt', 'old contents');
@@ -742,6 +740,42 @@ describe('Stage', () => {
       stage.merge();
 
       assert.equal(stage.git(['status', '--porcelain']), 'MD test.txt');
+    });
+
+    it('merges unstaged renames', async () => {
+      // this test only works if staged changes are also included
+      stage.writeFile('tracked.txt', 'original tracked contents');
+      stage.git(['add', 'tracked.txt']);
+      stage.git(['commit', '-m', 'add tracked file']);
+
+      stage.writeFile('to-be-renamed.txt', 'original contents');
+      stage.git(['add', 'to-be-renamed.txt']);
+      stage.git(['commit', '-m', 'add file to be renamed']);
+
+      stage.rename('to-be-renamed.txt', 'renamed.txt');
+
+      stage.writeFile('tracked.txt', 'modified tracked contents');
+      stage.git(['add', 'tracked.txt']);
+
+      const oldStatus = stage.git(['status', '--porcelain']);
+      assert(oldStatus.includes(' D to-be-renamed.txt'));
+      assert(oldStatus.includes('?? renamed.txt'));
+      assert(oldStatus.includes('M  tracked.txt'));
+
+      stage.prepare();
+      stage.merge();
+
+      const newStatus = stage.git([
+        'status',
+        '--porcelain',
+        '--untracked-files=all',
+      ]);
+      assert(
+        newStatus.includes('D  to-be-renamed.txt') ||
+          newStatus.includes(' D to-be-renamed.txt') ||
+          newStatus.includes('MD to-be-renamed.txt'),
+        'to-be-renamed.txt should show a deletion status (fix is working)',
+      );
     });
 
     it('restores merge status', async () => {

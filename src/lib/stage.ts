@@ -323,11 +323,12 @@ export class Stage {
 
       // unstaged deletions are not included in the patch and must be handled
       // separately because the patch cannot be applied if such files are
-      // modified by tasks
+      // modified by tasks; use force: true to handle cases where the file
+      // doesn't exist (e.g., unstaged renames)
       Object.entries(this.status)
         .filter(([, s]) => s.match(/^.D/))
         .map(([f]) => f)
-        .forEach((f) => fs.rmSync(path.resolve(this.cwd, f)));
+        .forEach((f) => fs.rmSync(path.resolve(this.cwd, f), { force: true }));
 
       // make sure all restored unstaged changes are kept out of the index
       this.git(['reset']);
