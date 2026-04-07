@@ -26,7 +26,7 @@ npm install --save-dev exec-staged
 
 ## Requirements
 
-- Git >= 2.41.0
+- Git > 2.13.0
 
 ## Usage
 
