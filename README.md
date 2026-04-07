@@ -24,6 +24,10 @@ Install from npm, using your preferred package manager:
 npm install --save-dev exec-staged
 ```
 
+## Requirements
+
+- Git >= 2.22.0
+
 ## Usage
 
 ### Run from the CLI

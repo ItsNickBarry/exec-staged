@@ -85,7 +85,7 @@ export class Stage {
       throw new Error('git installation not found');
     }
 
-    if (!version || semver.lte(version, '2.13.0')) {
+    if (!version || semver.lt(version, '2.22.0')) {
       this.logger.log('⚠️ Unsupported git version!');
       throw new Error('unsupported git version');
     }
@@ -185,7 +185,8 @@ export class Stage {
       this.git([
         'diff',
         '--binary',
-        '--default-prefix',
+        '--src-prefix=a/',
+        '--dst-prefix=b/',
         // skip deleted files because patch doesn't apply if they're modified
         '--diff-filter=d',
         '--no-color',
