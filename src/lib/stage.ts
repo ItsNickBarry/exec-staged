@@ -85,7 +85,7 @@ export class Stage {
       throw new Error('git installation not found');
     }
 
-    if (!version || semver.lte(version, '2.13.0')) {
+    if (!version || semver.lt(version, '2.13.0')) {
       this.logger.log('⚠️ Unsupported git version!');
       throw new Error('unsupported git version');
     }
