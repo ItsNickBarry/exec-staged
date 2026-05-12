@@ -311,16 +311,19 @@ export class Stage {
         STAGED_CHANGES_COMMIT_MESSAGE,
       ]);
 
-      // apply patch containing unstaged changes
-      this.git([
-        'apply',
-        '--allow-empty',
-        '--recount',
-        '--unidiff-zero',
-        '--whitespace=nowarn',
-        '--3way',
-        this.patchPath,
-      ]);
+      // apply patch containing unstaged changes.
+      // `--allow-empty` could be used here, but it was not added to `git apply`
+      // until 2.35.0 (January 2022), so we skip the call when the patch is empty.
+      if (fs.statSync(this.patchPath).size > 0) {
+        this.git([
+          'apply',
+          '--recount',
+          '--unidiff-zero',
+          '--whitespace=nowarn',
+          '--3way',
+          this.patchPath,
+        ]);
+      }
 
       // unstaged deletions are not included in the patch and must be handled
       // separately because the patch cannot be applied if such files are
