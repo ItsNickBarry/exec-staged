@@ -34,7 +34,10 @@ describe('Stage', () => {
     });
 
     it('throws if git version is unsupported', async () => {
-      stage.writeFile('.fake-bin/git', '#!/bin/sh\necho "git version 2.21.999"');
+      stage.writeFile(
+        '.fake-bin/git',
+        '#!/bin/sh\necho "git version 2.21.999"',
+      );
       stage.chmod('.fake-bin/git', 0o755);
 
       // override git to prefer the fake script that reports an old version
@@ -717,6 +720,36 @@ describe('Stage', () => {
       stage.git(['commit', '-m', 'add file']);
       stage.rename('test.old', 'test.new');
       stage.git(['add', 'test.old', 'test.new']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('applies empty patch when only staged changes exist', async () => {
+      // When there are no unstaged changes, `git diff` produces an empty patch.
+      // `git apply --allow-empty` is required so this does not error.
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+    });
+
+    it('applies empty patch when only unstaged deletions exist', async () => {
+      // Unstaged deletions are excluded from the patch by `--diff-filter=d`,
+      // so the patch is empty. `git apply --allow-empty` is required.
+      stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.rm('test.txt');
 
       const oldStatus = stage.git(['status', '-z']);
       stage.prepare();
