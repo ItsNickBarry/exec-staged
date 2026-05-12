@@ -90,16 +90,16 @@ export class Stage {
       throw new Error('unsupported git version');
     }
 
-    let gitRootDirectory: string;
+    let prefix: string;
 
     try {
-      gitRootDirectory = this.git(['rev-parse', '--show-toplevel']).trim();
+      prefix = this.git(['rev-parse', '--show-prefix']).trim();
     } catch (error) {
       this.logger.log('⚠️ Not a git repository!');
       throw new Error('cwd is not a git repository');
     }
 
-    if (gitRootDirectory !== this.cwd) {
+    if (prefix !== '') {
       this.logger.log('⚠️ Not in git root directory!');
       throw new Error('cwd is not a git repository root directory');
     }
