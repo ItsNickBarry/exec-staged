@@ -35,27 +35,27 @@
     "test": "pnpm build && tsx --test --experimental-test-coverage"
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "cosmiconfig": "^9.0.0",
-    "env-paths": "^3.0.0",
-    "execa": "^9.6.0",
+    "commander": "^15.0.0",
+    "cosmiconfig": "^9.0.2",
+    "env-paths": "^4.0.0",
+    "execa": "^9.6.1",
     "micromatch": "^4.0.8",
-    "on-process-exit": "^1.0.2",
-    "semver": "^7.7.2",
+    "on-process-exit": "^1.1.0",
+    "semver": "^7.8.5",
     "string-argv": "^0.3.2"
   },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@tsconfig/node22": "^22.0.2",
-    "@types/micromatch": "^4.0.9",
-    "@types/node": "^22.15.31",
-    "@types/semver": "^7.7.0",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@tsconfig/node22": "^22.0.5",
+    "@types/micromatch": "^4.0.10",
+    "@types/node": "^22.20.0",
+    "@types/semver": "^7.7.1",
     "husky": "^9.1.7",
-    "knip": "^5.60.2",
+    "knip": "^6.17.1",
     "lint-staged": "github:ItsNickBarry/lint-staged#knip",
-    "prettier": "^3.5.3",
-    "prettier-plugin-packagejson": "^2.5.15",
-    "tsx": "^4.20.1",
-    "typescript": "^5.8.3"
+    "prettier": "^3.8.4",
+    "prettier-plugin-packagejson": "^3.0.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   }
 }
