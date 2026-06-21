@@ -34,7 +34,10 @@ describe('Stage', () => {
     });
 
     it('throws if git version is unsupported', async () => {
-      stage.writeFile('.fake-bin/git', '#!/bin/sh\necho "git version 2.21.999"');
+      stage.writeFile(
+        '.fake-bin/git',
+        '#!/bin/sh\necho "git version 2.21.999"',
+      );
       stage.chmod('.fake-bin/git', 0o755);
 
       // override git to prefer the fake script that reports an old version
