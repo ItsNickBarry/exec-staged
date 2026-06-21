@@ -12,6 +12,7 @@ import { spawn, spawnSync } from './spawn.js';
 import micromatch from 'micromatch';
 import fs from 'node:fs';
 import path from 'node:path';
+import { deregisterExitHandler, registerExitHandler } from 'on-process-exit';
 import semver from 'semver';
 import parseArgsStringToArgv from 'string-argv';
 
@@ -23,6 +24,7 @@ export class Stage {
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private head?: string;
   private _gitDir?: string;
+  private needsRevert: boolean = false;
 
   private get gitDir(): string {
     return (this._gitDir ??= this.git(['rev-parse', '--absolute-git-dir']));
@@ -51,6 +53,15 @@ export class Stage {
       throw error;
     }
 
+    this.needsRevert = true;
+
+    const exitHandlerId = registerExitHandler(() => {
+      if (this.needsRevert) {
+        this.needsRevert = false;
+        this.revert();
+      }
+    });
+
     try {
       await this.run(tasks);
       this.merge();
@@ -58,12 +69,15 @@ export class Stage {
       this.logger.debug(error);
 
       try {
+        this.needsRevert = false;
         this.revert();
       } catch (error) {
         this.logger.debug(error);
       }
 
       throw error;
+    } finally {
+      deregisterExitHandler(exitHandlerId);
     }
   }
 
@@ -348,6 +362,8 @@ export class Stage {
       this.logger.log('⚠️ Error restoring unstaged changes from stash!');
       throw error;
     }
+
+    this.needsRevert = false;
   }
 
   protected revert() {
