@@ -6,7 +6,6 @@ import {
   INTERPOLATION_IDENTIFIER,
   MERGE_FILES,
   MESSAGE_PREFIX,
-  STAGED_CHANGES_COMMIT_MESSAGE,
   stageLifecycleMessages,
 } from './constants.js';
 import { Logger } from './logger.js';
@@ -192,23 +191,20 @@ export class Stage {
     this.logger.log(stageLifecycleMessages.prepare);
 
     try {
-      this.git(['rev-parse', '--verify', '-q', 'HEAD']);
+      this.head = this.git(['rev-parse', '--verify', '-q', 'HEAD']);
     } catch (error) {
-      // HEAD does not resolve to a commit, so create an empty one;
-      // `--only` without paths leaves staged changes out of the commit
-      this.git([
-        'commit',
-        '--allow-empty',
-        '--only',
-        '--no-verify',
-        '-m',
-        INITIAL_COMMIT_MESSAGE,
-      ]);
+      // HEAD does not resolve to a commit, so create an empty one; use
+      // plumbing commands instead of `git commit`, which would run the user's
+      // commit hooks (`--no-verify` does not skip all of them) and may try to
+      // sign the commit
+      const tree = this.git(['mktree']);
+      this.head = this.git(['commit-tree', tree, '-m', INITIAL_COMMIT_MESSAGE]);
+
+      // empty old value ensures that the branch still does not exist
+      this.git(['update-ref', 'HEAD', this.head, '']);
 
       this.createdInitialCommit = true;
     }
-
-    this.head = this.git(['rev-parse', 'HEAD']);
 
     this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
@@ -216,7 +212,10 @@ export class Stage {
       .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
 
     // if there are no files in index or working tree, do not attempt to stash
-    if (Object.keys(this.status).length === 0) return;
+    if (Object.keys(this.status).length === 0) {
+      this.deleteInitialCommit();
+      return;
+    }
 
     fs.mkdirSync(this.artifactsDir);
 
@@ -290,6 +289,10 @@ export class Stage {
       this.logger.log('⚠️ Error creating backup stash!');
       throw error;
     }
+
+    // the stash is based on the initial commit, which is no longer needed on
+    // the branch; delete it so that tasks run with the branch as it was
+    this.deleteInitialCommit();
   }
 
   protected async run(tasks: ExecStagedConfig) {
@@ -349,10 +352,7 @@ export class Stage {
       throw error;
     }
 
-    if (!this.stashed) {
-      this.deleteInitialCommit();
-      return;
-    }
+    if (!this.stashed) return;
 
     // attempt to retrieve the stash before running any damaging operations
     const stash = this.findBackupStash();
@@ -360,15 +360,9 @@ export class Stage {
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
 
-      // commit staged changes to keep them separate from unstaged changes in
+      // save staged changes to keep them separate from unstaged changes in
       // patch, because `--3-way` adds unstaged changes to the index
-      this.git([
-        'commit',
-        '--allow-empty',
-        '--no-verify',
-        '-m',
-        STAGED_CHANGES_COMMIT_MESSAGE,
-      ]);
+      const stagedTree = this.git(['write-tree']);
 
       // apply patch containing unstaged changes.
       // `--allow-empty` could be used here, but it was not added to `git apply`
@@ -394,11 +388,7 @@ export class Stage {
         .forEach((f) => fs.rmSync(path.resolve(this.cwd, f), { force: true }));
 
       // make sure all restored unstaged changes are kept out of the index
-      this.git(['reset']);
-
-      // undo temporary commit while keeping its changes in the index
-      this.git(['reset', '--soft', this.head!]);
-      this.deleteInitialCommit();
+      this.git(['read-tree', stagedTree]);
 
       // clean up
       this.restoreMergeStatus();
@@ -426,23 +416,21 @@ export class Stage {
       this.logger.debug('➡️ ➡️ Reverting changes made by tasks...');
 
       this.git(['add', '-A']);
-      this.git(['reset', '--hard', this.head!]);
+      // reset the index and working tree without moving the branch, which
+      // may have no commits
+      this.git(['read-tree', '-u', '--reset', this.head!]);
     } catch (error) {
       this.logger.log('⚠️ Failed to revert changes made by tasks!');
       throw error;
     }
 
-    if (!this.stashed) {
-      this.deleteInitialCommit();
-      return;
-    }
+    if (!this.stashed) return;
 
     try {
       this.logger.debug('➡️ ➡️ Restoring state from backup stash...');
 
       this.git(['stash', 'apply', '--index', stash!]);
       this.git(['stash', 'drop', stash!]);
-      this.deleteInitialCommit();
       this.restoreMergeStatus();
       fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
@@ -486,7 +474,6 @@ export class Stage {
     // delete the branch so that it has no commits again, leaving the index and
     // working tree as they are; fails if HEAD no longer points to the commit
     this.git(['update-ref', '-d', 'HEAD', this.head!]);
-
     this.createdInitialCommit = false;
   }
 
@@ -524,17 +511,9 @@ export class Stage {
       const head = this.git(['rev-parse', `${stash}^1`]);
 
       this.git(['add', '-A']);
-      this.git(['reset', '--hard', head]);
+      this.git(['read-tree', '-u', '--reset', head]);
       this.git(['stash', 'apply', '--index', stash]);
       this.git(['stash', 'drop', stash]);
-
-      // if the stash is based on an initial commit created by exec-staged,
-      // delete it so that the branch has no commits again
-      if (
-        this.git(['log', '-1', '--format=%s', head]) === INITIAL_COMMIT_MESSAGE
-      ) {
-        this.git(['update-ref', '-d', 'HEAD', head]);
-      }
     }
 
     if (artifactsFound) {

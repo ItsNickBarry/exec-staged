@@ -290,6 +290,18 @@ describe('execStaged', () => {
       assert.equal(result, true);
     });
 
+    it('returns exit code 0 if commit signing is configured but unavailable', async () => {
+      // Require signing for all commits, using a signing program that always
+      // fails. Signing the temporary initial commit would fail (or, with a
+      // real signing program, prompt for a passphrase or security key).
+      stage.git(['config', 'commit.gpgSign', 'true']);
+      stage.git(['config', 'gpg.program', 'false']);
+
+      const result = await stage.execStaged([TASK_EXIT_0]);
+
+      assert.equal(result, true);
+    });
+
     it('runs tasks against staged files', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);

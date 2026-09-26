@@ -4,7 +4,6 @@ import {
   DEFAULT_CONFIG_ENTRY,
   INITIAL_COMMIT_MESSAGE,
   INTERPOLATION_IDENTIFIER,
-  STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
@@ -90,17 +89,6 @@ describe('Stage', () => {
       stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
 
       assert.throws(() => stage.check(), /unexpected artifacts directory/);
-    });
-
-    it('throws if temporary commit from previous run is present', async () => {
-      stage.git([
-        'commit',
-        '--allow-empty',
-        '-m',
-        STAGED_CHANGES_COMMIT_MESSAGE,
-      ]);
-
-      assert.throws(() => stage.check(), /unexpected transient commit/);
     });
 
     it('throws if initial commit from previous run is present', async () => {
@@ -863,16 +851,6 @@ describe('Stage', () => {
 
       assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
-
-    it('resets temporary staged changes commit', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
-
-      stage.prepare();
-      stage.merge();
-
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
-    });
   });
 
   describe('::revert', () => {
@@ -1102,16 +1080,6 @@ describe('Stage', () => {
       assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
     });
 
-    it('resets temporary staged changes commit', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
-
-      stage.prepare();
-      stage.revert();
-
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
-    });
-
     it('throws if expected backup stash is not found', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
@@ -1160,32 +1128,6 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'unstaged contents');
-    });
-
-    it('restores state from backup stash with temporary commit present', async () => {
-      stage.writeFile('test.txt', 'staged contents');
-      stage.git(['add', 'test.txt']);
-      stage.writeFile('test.txt', 'unstaged contents');
-
-      const oldStatus = stage.git(['status', '-z']);
-
-      stage.prepare();
-
-      stage.git(['add', '-A']);
-      stage.git([
-        'commit',
-        '--allow-empty',
-        '--no-verify',
-        '-m',
-        STAGED_CHANGES_COMMIT_MESSAGE,
-      ]);
-
-      stage.recover();
-
-      const newStatus = stage.git(['status', '-z']);
-      assert.equal(newStatus, oldStatus);
-      assert.equal(stage.readFile('test.txt'), 'unstaged contents');
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
     });
 
     it('removes artifacts directory', async () => {
