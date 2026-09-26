@@ -8,8 +8,10 @@ export const DEFAULT_CONFIG_ENTRY: Omit<ExecStagedConfigEntry, 'task'> = {
 
 export const MERGE_FILES = ['MERGE_HEAD', 'MERGE_MODE', 'MERGE_MSG'] as const;
 
-export const BACKUP_STASH_MESSAGE = `💾 ${pkg.name} backup stash`;
-export const STAGED_CHANGES_COMMIT_MESSAGE = `💾 ${pkg.name} staged changes`;
+export const MESSAGE_PREFIX = `💾 ${pkg.name}`;
+export const BACKUP_STASH_MESSAGE = `${MESSAGE_PREFIX} backup stash`;
+export const STAGED_CHANGES_COMMIT_MESSAGE = `${MESSAGE_PREFIX} staged changes`;
+export const INITIAL_COMMIT_MESSAGE = `${MESSAGE_PREFIX} initial commit`;
 
 export const ARTIFACTS_DIRECTORY = `.${pkg.name}`;
 

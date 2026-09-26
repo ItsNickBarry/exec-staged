@@ -2,8 +2,10 @@ import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
+  INITIAL_COMMIT_MESSAGE,
   INTERPOLATION_IDENTIFIER,
   MERGE_FILES,
+  MESSAGE_PREFIX,
   STAGED_CHANGES_COMMIT_MESSAGE,
   stageLifecycleMessages,
 } from './constants.js';
@@ -23,6 +25,7 @@ export class Stage {
   private readonly status: { [file: string]: string } = {};
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private head?: string;
+  private createdInitialCommit: boolean = false;
   private _gitDir?: string;
   private needsRevert: boolean = false;
 
@@ -159,19 +162,51 @@ export class Stage {
       throw new Error('unexpected backup stash');
     }
 
-    if (
-      this.git(['log', '--grep', STAGED_CHANGES_COMMIT_MESSAGE, '--format=%s'])
-    ) {
-      this.logger.log('⚠️ Found unexpected temporary commit!');
-      this.logger.log(
-        'It must be left over from a previous failed run.  Remove it before proceeding.',
-      );
-      throw new Error('unexpected temporary commit');
+    let transientCommits: string | undefined;
+
+    try {
+      transientCommits = this.git([
+        'log',
+        '--fixed-strings',
+        '--grep',
+        MESSAGE_PREFIX,
+        '--format=%h %s',
+      ]);
+    } catch {
+      // HEAD does not resolve to a commit, so there are no transient commits
+    }
+
+    if (transientCommits) {
+      for (const transientCommit of transientCommits.split('\n')) {
+        this.logger.log('⚠️ Found unexpected transient commit!');
+        this.logger.log(transientCommit);
+        this.logger.log(
+          'It must be left over from a previous failed run.  Remove it before proceeding.',
+        );
+      }
+      throw new Error('unexpected transient commit');
     }
   }
 
   protected prepare() {
     this.logger.log(stageLifecycleMessages.prepare);
+
+    try {
+      this.git(['rev-parse', '--verify', '-q', 'HEAD']);
+    } catch (error) {
+      // HEAD does not resolve to a commit, so create an empty one;
+      // `--only` without paths leaves staged changes out of the commit
+      this.git([
+        'commit',
+        '--allow-empty',
+        '--only',
+        '--no-verify',
+        '-m',
+        INITIAL_COMMIT_MESSAGE,
+      ]);
+
+      this.createdInitialCommit = true;
+    }
 
     this.head = this.git(['rev-parse', 'HEAD']);
 
@@ -237,13 +272,20 @@ export class Stage {
       this.git([
         'stash',
         'push',
-        '--keep-index',
         '--include-untracked',
         '--message',
         BACKUP_STASH_MESSAGE,
       ]);
 
       this.stashed = true;
+
+      // stashing resets the index and working tree to HEAD, hiding staged
+      // changes along with unstaged ones; restore the staged state (the stash's
+      // index commit) so that tasks can run against it, as `--keep-index`
+      // would; `--keep-index` is not used because it fails if both the index
+      // and HEAD are empty (e.g. only untracked files on a branch with no
+      // commits)
+      this.git(['read-tree', '-u', '--reset', 'stash@{0}^2']);
     } catch (error) {
       this.logger.log('⚠️ Error creating backup stash!');
       throw error;
@@ -307,7 +349,10 @@ export class Stage {
       throw error;
     }
 
-    if (!this.stashed) return;
+    if (!this.stashed) {
+      this.deleteInitialCommit();
+      return;
+    }
 
     // attempt to retrieve the stash before running any damaging operations
     const stash = this.findBackupStash();
@@ -353,6 +398,7 @@ export class Stage {
 
       // undo temporary commit while keeping its changes in the index
       this.git(['reset', '--soft', this.head!]);
+      this.deleteInitialCommit();
 
       // clean up
       this.restoreMergeStatus();
@@ -386,13 +432,17 @@ export class Stage {
       throw error;
     }
 
-    if (!this.stashed) return;
+    if (!this.stashed) {
+      this.deleteInitialCommit();
+      return;
+    }
 
     try {
       this.logger.debug('➡️ ➡️ Restoring state from backup stash...');
 
       this.git(['stash', 'apply', '--index', stash!]);
       this.git(['stash', 'drop', stash!]);
+      this.deleteInitialCommit();
       this.restoreMergeStatus();
       fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
@@ -428,6 +478,16 @@ export class Stage {
         path.resolve(this.gitDir, mergeFile),
       );
     }
+  }
+
+  private deleteInitialCommit() {
+    if (!this.createdInitialCommit) return;
+
+    // delete the branch so that it has no commits again, leaving the index and
+    // working tree as they are; fails if HEAD no longer points to the commit
+    this.git(['update-ref', '-d', 'HEAD', this.head!]);
+
+    this.createdInitialCommit = false;
   }
 
   private indexOfBackupStash(): number {
@@ -467,6 +527,14 @@ export class Stage {
       this.git(['reset', '--hard', head]);
       this.git(['stash', 'apply', '--index', stash]);
       this.git(['stash', 'drop', stash]);
+
+      // if the stash is based on an initial commit created by exec-staged,
+      // delete it so that the branch has no commits again
+      if (
+        this.git(['log', '-1', '--format=%s', head]) === INITIAL_COMMIT_MESSAGE
+      ) {
+        this.git(['update-ref', '-d', 'HEAD', head]);
+      }
     }
 
     if (artifactsFound) {

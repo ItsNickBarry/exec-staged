@@ -2,6 +2,7 @@ import {
   ARTIFACTS_DIRECTORY,
   BACKUP_STASH_MESSAGE,
   DEFAULT_CONFIG_ENTRY,
+  INITIAL_COMMIT_MESSAGE,
   INTERPOLATION_IDENTIFIER,
   STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
@@ -99,7 +100,20 @@ describe('Stage', () => {
         STAGED_CHANGES_COMMIT_MESSAGE,
       ]);
 
-      assert.throws(() => stage.check(), /unexpected temporary commit/);
+      assert.throws(() => stage.check(), /unexpected transient commit/);
+    });
+
+    it('throws if initial commit from previous run is present', async () => {
+      stage.git(['checkout', '--orphan', 'orphan']);
+      stage.git([
+        'commit',
+        '--allow-empty',
+        '--only',
+        '-m',
+        INITIAL_COMMIT_MESSAGE,
+      ]);
+
+      assert.throws(() => stage.check(), /unexpected transient commit/);
     });
 
     it('throws if git directory is a symlink pointing inside repository', async () => {
