@@ -24,7 +24,6 @@ export class Stage {
   private readonly status: { [file: string]: string } = {};
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private head?: string;
-  private createdInitialCommit: boolean = false;
   private _gitDir?: string;
   private needsRevert: boolean = false;
 
@@ -190,20 +189,16 @@ export class Stage {
   protected prepare() {
     this.logger.log(stageLifecycleMessages.prepare);
 
+    let branchHasNoCommits = false;
+
     try {
       this.head = this.git(['rev-parse', '--verify', '-q', 'HEAD']);
     } catch (error) {
-      // HEAD does not resolve to a commit, so create an empty one; use
-      // plumbing commands instead of `git commit`, which would run the user's
-      // commit hooks (`--no-verify` does not skip all of them) and may try to
-      // sign the commit
-      const tree = this.git(['mktree']);
-      this.head = this.git(['commit-tree', tree, '-m', INITIAL_COMMIT_MESSAGE]);
-
-      // empty old value ensures that the branch still does not exist
-      this.git(['update-ref', 'HEAD', this.head, '']);
-
-      this.createdInitialCommit = true;
+      // HEAD does not resolve to a commit, so use the empty tree, which is
+      // enough to reset the index and working tree to, until a commit is
+      // needed for stashing
+      this.head = this.git(['mktree']);
+      branchHasNoCommits = true;
     }
 
     this.git(['status', '--porcelain', '--no-renames'])
@@ -212,9 +207,22 @@ export class Stage {
       .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
 
     // if there are no files in index or working tree, do not attempt to stash
-    if (Object.keys(this.status).length === 0) {
-      this.deleteInitialCommit();
-      return;
+    if (Object.keys(this.status).length === 0) return;
+
+    if (branchHasNoCommits) {
+      // stashing requires a commit, so create an empty one; use plumbing
+      // commands instead of `git commit`, which would run the user's commit
+      // hooks (`--no-verify` does not skip all of them) and may try to sign
+      // the commit
+      this.head = this.git([
+        'commit-tree',
+        this.head,
+        '-m',
+        INITIAL_COMMIT_MESSAGE,
+      ]);
+
+      // empty old value ensures that the branch still does not exist
+      this.git(['update-ref', 'HEAD', this.head, '']);
     }
 
     fs.mkdirSync(this.artifactsDir);
@@ -290,9 +298,13 @@ export class Stage {
       throw error;
     }
 
-    // the stash is based on the initial commit, which is no longer needed on
-    // the branch; delete it so that tasks run with the branch as it was
-    this.deleteInitialCommit();
+    if (branchHasNoCommits) {
+      // the stash is based on the initial commit, which is no longer needed on
+      // the branch; delete the branch so that tasks run with it as it was,
+      // leaving the index and working tree as they are; old value ensures that
+      // HEAD still points to the commit
+      this.git(['update-ref', '-d', 'HEAD', this.head]);
+    }
   }
 
   protected async run(tasks: ExecStagedConfig) {
@@ -466,15 +478,6 @@ export class Stage {
         path.resolve(this.gitDir, mergeFile),
       );
     }
-  }
-
-  private deleteInitialCommit() {
-    if (!this.createdInitialCommit) return;
-
-    // delete the branch so that it has no commits again, leaving the index and
-    // working tree as they are; fails if HEAD no longer points to the commit
-    this.git(['update-ref', '-d', 'HEAD', this.head!]);
-    this.createdInitialCommit = false;
   }
 
   private indexOfBackupStash(): number {
