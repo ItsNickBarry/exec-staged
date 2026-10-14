@@ -648,6 +648,19 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
+    it('maintains intent-to-add additions', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', '--intent-to-add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
+    });
+
     it('maintains staged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
@@ -994,6 +1007,19 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
+    });
+
+    it('restores intent-to-add additions', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', '--intent-to-add', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
     });
 
     it('restores staged additions', async () => {

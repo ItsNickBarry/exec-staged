@@ -358,6 +358,7 @@ export class Stage {
 
       // make sure all restored unstaged changes are kept out of the index
       this.git(['read-tree', '--reset', newStagedTree]);
+      this.restoreIntentToAdd();
 
       // clean up
       this.deleteBackup();
@@ -464,6 +465,22 @@ export class Stage {
     this.git(['add', '-A'], this.tempIndexEnv);
     this.git(['read-tree', '-u', '--reset', workingTree], this.tempIndexEnv);
     this.git(['read-tree', '--reset', stagedTree]);
+    this.restoreIntentToAdd();
+  }
+
+  // intent-to-add entries are omitted from trees, so they are lost when the
+  // index is read from a tree and must be added again
+  private restoreIntentToAdd() {
+    const files = Object.entries(this.status)
+      .filter(([, s]) => s === ' A')
+      .map(([f]) => f)
+      .filter((f) =>
+        fs.lstatSync(path.resolve(this.cwd, f), { throwIfNoEntry: false }),
+      );
+
+    if (files.length > 0) {
+      this.git(['add', '--intent-to-add', '--', ...files]);
+    }
   }
 
   private deleteBackup() {
