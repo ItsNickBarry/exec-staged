@@ -204,42 +204,6 @@ export class Stage {
     fs.mkdirSync(this.artifactsDir);
 
     try {
-      this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
-
-      const unstagedAdditions = Object.entries(this.status)
-        .filter(([, s]) => s.match(/^\?\?/))
-        .map(([f]) => f);
-
-      if (unstagedAdditions.length) {
-        this.git(['add', '--intent-to-add', '--', ...unstagedAdditions]);
-      }
-
-      this.git([
-        'diff',
-        '--binary',
-        '--src-prefix=a/',
-        '--dst-prefix=b/',
-        // skip deleted files because patch doesn't apply if they're modified
-        '--diff-filter=d',
-        '--no-color',
-        '--no-ext-diff',
-        '--no-rename-empty',
-        '--patch',
-        '--submodule=short',
-        '--unified=0',
-        '--output',
-        this.patchPath,
-      ]);
-
-      if (unstagedAdditions.length) {
-        this.git(['reset', '--', ...unstagedAdditions]);
-      }
-    } catch (error) {
-      this.logger.log('⚠️ Error creating patch of unstaged changes!');
-      throw error;
-    }
-
-    try {
       this.logger.debug('➡️ ➡️ Backing up merge status...');
       this.backupMergeStatus();
     } catch (error) {
@@ -332,7 +296,35 @@ export class Stage {
     if (!this.backedUp) return;
 
     // make sure that the backup exists before running any damaging operations
-    this.findBackup();
+    const { stagedTree, workingTree } = this.findBackup();
+
+    try {
+      this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
+
+      // unstaged changes are the differences between the backed-up staged state
+      // and working tree
+      this.git([
+        'diff',
+        '--binary',
+        '--src-prefix=a/',
+        '--dst-prefix=b/',
+        // skip deleted files because patch doesn't apply if they're modified
+        '--diff-filter=d',
+        '--no-color',
+        '--no-ext-diff',
+        '--no-rename-empty',
+        '--patch',
+        '--submodule=short',
+        '--unified=0',
+        '--output',
+        this.patchPath,
+        stagedTree,
+        workingTree,
+      ]);
+    } catch (error) {
+      this.logger.log('⚠️ Error creating patch of unstaged changes!');
+      throw error;
+    }
 
     try {
       this.logger.debug('➡️ ➡️ Restoring unstaged changes...');
