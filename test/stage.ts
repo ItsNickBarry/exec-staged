@@ -704,6 +704,26 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'new contents');
     });
 
+    it('restores unstaged modifications containing non-UTF-8 bytes', async () => {
+      // latin1-encoded "café", which is not valid UTF-8
+      const contents = Buffer.from('caf\xe9\n', 'latin1');
+
+      stage.writeFile('test.txt', 'old contents\n');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('test.txt', contents);
+
+      const oldStatus = stage.git(['status', '-z']);
+      const oldHash = stage.git(['hash-object', 'test.txt']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+      const newHash = stage.git(['hash-object', 'test.txt']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newHash, oldHash);
+    });
+
     it('restores unstaged deletions', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);

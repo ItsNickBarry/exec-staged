@@ -38,7 +38,7 @@ export class TestStage extends Stage {
     return fs.readFileSync(this.resolve(relativePath), 'utf-8');
   }
 
-  public writeFile(relativePath: string, contents: string = '') {
+  public writeFile(relativePath: string, contents: string | Uint8Array = '') {
     const absolutePath = this.resolve(relativePath);
     fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
     fs.writeFileSync(absolutePath, contents);
