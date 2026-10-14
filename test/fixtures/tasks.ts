@@ -3,6 +3,7 @@ import { TestStage } from './test_stage';
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
 
+export const TASK_APPEND_FILES = `bash -c 'for f; do echo modified >> "$f"; done' _ ${INTERPOLATION_IDENTIFIER}`;
 export const TASK_ASSERT_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^..")" ] && exit 1 || exit 0'`;
 export const TASK_ASSERT_NO_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^..")" ] && exit 0 || exit 1'`;
 export const TASK_ASSERT_NO_UNSTAGED_CHANGES = `bash -c '[ -z "$(git status --porcelain | grep "^.[^ ]")" ] && exit 0 || exit 1'`;
@@ -20,6 +21,22 @@ if (process.argv[1] === import.meta.filename) {
 
     beforeEach(async () => {
       stage = TestStage.create();
+    });
+
+    describe('TASK_APPEND_FILES', () => {
+      it('appends to matching files', async () => {
+        stage.writeFile('test.txt', 'contents\n');
+        stage.writeFile('other.txt', 'contents\n');
+
+        assert.doesNotThrow(() =>
+          stage.spawnSync(
+            TASK_APPEND_FILES.replace(INTERPOLATION_IDENTIFIER, 'test.txt'),
+          ),
+        );
+
+        assert.equal(stage.readFile('test.txt'), 'contents\nmodified\n');
+        assert.equal(stage.readFile('other.txt'), 'contents\n');
+      });
     });
 
     describe('TASK_ASSERT_CHANGES', () => {
