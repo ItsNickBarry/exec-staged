@@ -357,7 +357,7 @@ export class Stage {
         .forEach((f) => fs.rmSync(path.resolve(this.cwd, f), { force: true }));
 
       // make sure all restored unstaged changes are kept out of the index
-      this.git(['read-tree', newStagedTree]);
+      this.git(['read-tree', '--reset', newStagedTree]);
 
       // clean up
       this.deleteBackup();
@@ -463,7 +463,7 @@ export class Stage {
     fs.copyFileSync(this.indexPath, this.tempIndexPath);
     this.git(['add', '-A'], this.tempIndexEnv);
     this.git(['read-tree', '-u', '--reset', workingTree], this.tempIndexEnv);
-    this.git(['read-tree', stagedTree]);
+    this.git(['read-tree', '--reset', stagedTree]);
   }
 
   private deleteBackup() {

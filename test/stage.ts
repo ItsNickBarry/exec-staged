@@ -903,6 +903,23 @@ describe('Stage', () => {
 
       assert(!stage.hasBackup());
     });
+
+    it('preserves index stat data of unchanged files', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('untracked.txt');
+
+      const oldStat = stage.git(['ls-files', '--debug', 'test.txt']);
+      stage.prepare();
+      stage.merge();
+      const newStat = stage.git(['ls-files', '--debug', 'test.txt']);
+
+      assert.equal(
+        newStat.match(/mtime: .*/)?.[0],
+        oldStat.match(/mtime: .*/)?.[0],
+      );
+    });
   });
 
   describe('::revert', () => {
@@ -1161,6 +1178,23 @@ describe('Stage', () => {
 
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'old contents');
+    });
+
+    it('preserves index stat data of unchanged files', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('untracked.txt');
+
+      const oldStat = stage.git(['ls-files', '--debug', 'test.txt']);
+      stage.prepare();
+      stage.revert();
+      const newStat = stage.git(['ls-files', '--debug', 'test.txt']);
+
+      assert.equal(
+        newStat.match(/mtime: .*/)?.[0],
+        oldStat.match(/mtime: .*/)?.[0],
+      );
     });
   });
 
