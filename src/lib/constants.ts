@@ -8,9 +8,8 @@ export const DEFAULT_CONFIG_ENTRY: Omit<ExecStagedConfigEntry, 'task'> = {
 
 export const MERGE_FILES = ['MERGE_HEAD', 'MERGE_MODE', 'MERGE_MSG'] as const;
 
-export const MESSAGE_PREFIX = `💾 ${pkg.name}`;
-export const BACKUP_STASH_MESSAGE = `${MESSAGE_PREFIX} backup stash`;
-export const INITIAL_COMMIT_MESSAGE = `${MESSAGE_PREFIX} initial commit`;
+export const BACKUP_STAGED_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-staged-tree`;
+export const BACKUP_WORKING_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-working-tree`;
 
 export const ARTIFACTS_DIRECTORY = `.${pkg.name}`;
 

@@ -1,4 +1,7 @@
-import { BACKUP_STASH_MESSAGE } from '../src/lib/constants.js';
+import {
+  BACKUP_STAGED_TREE_REF,
+  BACKUP_WORKING_TREE_REF,
+} from '../src/lib/constants.js';
 import {
   TASK_APPEND_FILES,
   TASK_ASSERT_CHANGES,
@@ -18,9 +21,24 @@ describe('execStaged', () => {
     stage = TestStage.create();
   });
 
-  it('returns exit code 1 if backup stash from previous run is present', async () => {
-    stage.writeFile('test.txt');
-    stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
+  it('returns exit code 1 if backup staged tree ref from previous run is present', async () => {
+    stage.git([
+      'update-ref',
+      BACKUP_STAGED_TREE_REF,
+      stage.git(['write-tree']),
+    ]);
+
+    const result = await stage.execStaged([]);
+
+    assert.equal(result, false);
+  });
+
+  it('returns exit code 1 if backup working tree ref from previous run is present', async () => {
+    stage.git([
+      'update-ref',
+      BACKUP_WORKING_TREE_REF,
+      stage.git(['write-tree']),
+    ]);
 
     const result = await stage.execStaged([]);
 
@@ -395,7 +413,7 @@ describe('recoverStaged', () => {
     assert.equal(result, true);
   });
 
-  it('returns true and restores state from backup stash', async () => {
+  it('returns true and restores state from backup', async () => {
     stage.writeFile('test.txt', 'staged contents');
     stage.git(['add', 'test.txt']);
     stage.writeFile('test.txt', 'unstaged contents');
@@ -410,7 +428,7 @@ describe('recoverStaged', () => {
 
     const newStatus = stage.git(['status', '-z']);
     assert.equal(newStatus, oldStatus);
-    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    assert(!stage.hasBackup());
   });
 
   it('returns true and restores merge status', async () => {
@@ -464,7 +482,7 @@ describe('recoverStaged', () => {
       assert.equal(result, true);
     });
 
-    it('returns true and restores state from backup stash', async () => {
+    it('returns true and restores state from backup', async () => {
       stage.writeFile('test.txt', 'staged contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'unstaged contents');
@@ -479,7 +497,7 @@ describe('recoverStaged', () => {
 
       const newStatus = stage.git(['status', '-z']);
       assert.equal(newStatus, oldStatus);
-      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.hasBackup());
     });
   });
 });

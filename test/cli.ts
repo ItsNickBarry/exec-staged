@@ -1,4 +1,3 @@
-import { BACKUP_STASH_MESSAGE } from '../src/lib/constants';
 import {
   TASK_APPEND_FILES,
   TASK_EXIT_0,
@@ -73,7 +72,7 @@ describe('CLI', () => {
     });
 
     setTimeout(() => {
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
       // assert that kill signal was received before process ended normally
       assert(child.kill());
     }, 750);
@@ -84,7 +83,7 @@ describe('CLI', () => {
 
     assert.equal(child.exitCode, 143);
     assert.equal(newStatus, oldStatus);
-    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    assert(!stage.hasBackup());
   });
 
   it('reverts state on process interrupt if repository has no commits', async () => {
@@ -107,7 +106,7 @@ describe('CLI', () => {
     });
 
     const timeout = setTimeout(() => {
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
       // assert that kill signal was received before process ended normally
       assert(child.kill());
     }, 750);
@@ -121,7 +120,7 @@ describe('CLI', () => {
 
     assert.equal(child.exitCode, 143);
     assert.equal(newStatus, oldStatus);
-    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    assert(!stage.hasBackup());
     // assert that HEAD still does not resolve to a commit
     assert.throws(() => stage.git(['rev-parse', '--verify', '-q', 'HEAD']));
   });
@@ -169,7 +168,7 @@ describe('CLI', () => {
 
     const newStatus = stage.git(['status', '-z']);
     assert.equal(newStatus, oldStatus);
-    assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+    assert(!stage.hasBackup());
   });
 
   it('returns exit code 0 when nothing to recover', async () => {

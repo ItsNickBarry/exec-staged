@@ -1,11 +1,10 @@
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   ARTIFACTS_DIRECTORY,
-  BACKUP_STASH_MESSAGE,
-  INITIAL_COMMIT_MESSAGE,
+  BACKUP_STAGED_TREE_REF,
+  BACKUP_WORKING_TREE_REF,
   INTERPOLATION_IDENTIFIER,
   MERGE_FILES,
-  MESSAGE_PREFIX,
   stageLifecycleMessages,
 } from './constants.js';
 import { Logger } from './logger.js';
@@ -17,13 +16,15 @@ import { deregisterExitHandler, registerExitHandler } from 'on-process-exit';
 import semver from 'semver';
 import parseArgsStringToArgv from 'string-argv';
 
+type Backup = { stagedTree: string; workingTree: string };
+
 export class Stage {
   public readonly logger: Logger;
   protected readonly cwd: string;
-  protected stashed: boolean = false;
+  protected backedUp: boolean = false;
   private readonly status: { [file: string]: string } = {};
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
-  private head?: string;
+  private stagedTree?: string;
   private _gitDir?: string;
   private needsRevert: boolean = false;
 
@@ -37,6 +38,26 @@ export class Stage {
 
   private get patchPath(): string {
     return path.resolve(this.artifactsDir, 'patch.diff');
+  }
+
+  // absolute path of the real index, which holds the staged state; resolved via
+  // git because it may differ from the default (`<git dir>/index`) depending on
+  // execution context
+  private get indexPath(): string {
+    return path.resolve(
+      this.cwd,
+      this.git(['rev-parse', '--git-path', 'index']),
+    );
+  }
+
+  private get tempIndexPath(): string {
+    return path.resolve(this.artifactsDir, 'index');
+  }
+
+  // environment for git commands that should use a temporary index instead of
+  // the real one, so that the real index is not modified
+  private get tempIndexEnv(): Record<string, string> {
+    return { GIT_INDEX_FILE: this.tempIndexPath };
   }
 
   constructor(cwd: string, options: StageOptions = {}) {
@@ -121,8 +142,9 @@ export class Stage {
 
     // --absolute-git-dir resolves symlinks, --git-dir does not; if they
     // differ, .git involves symlinks; walk the chain and reject if any
-    // target is inside the repo, because git stash --include-untracked
-    // would stash (and remove) it, breaking all subsequent operations
+    // target is inside the repo, because creating the backup would include
+    // (and remove) it along with untracked files, breaking all subsequent
+    // operations
     let gitDirPath = path.resolve(
       this.cwd,
       this.git(['rev-parse', '--git-dir']),
@@ -152,78 +174,32 @@ export class Stage {
       throw new Error('unexpected artifacts directory');
     }
 
-    if (this.indexOfBackupStash() !== -1) {
-      this.logger.log('⚠️ Found unexpected backup stash!');
+    if (
+      this.resolveRef(BACKUP_STAGED_TREE_REF) ||
+      this.resolveRef(BACKUP_WORKING_TREE_REF)
+    ) {
+      this.logger.log('⚠️ Found unexpected backup!');
       this.logger.log(
         'It must be left over from a previous failed run.  Run `exec-staged recover` to restore your repository.',
       );
-      throw new Error('unexpected backup stash');
-    }
-
-    let transientCommits: string | undefined;
-
-    try {
-      transientCommits = this.git([
-        'log',
-        '--fixed-strings',
-        '--grep',
-        MESSAGE_PREFIX,
-        '--format=%h %s',
-      ]);
-    } catch {
-      // HEAD does not resolve to a commit, so there are no transient commits
-    }
-
-    if (transientCommits) {
-      for (const transientCommit of transientCommits.split('\n')) {
-        this.logger.log('⚠️ Found unexpected transient commit!');
-        this.logger.log(transientCommit);
-        this.logger.log(
-          'It must be left over from a previous failed run.  Remove it before proceeding.',
-        );
-      }
-      throw new Error('unexpected transient commit');
+      throw new Error('unexpected backup');
     }
   }
 
   protected prepare() {
     this.logger.log(stageLifecycleMessages.prepare);
 
-    let branchHasNoCommits = false;
-
-    try {
-      this.head = this.git(['rev-parse', '--verify', '-q', 'HEAD']);
-    } catch (error) {
-      // HEAD does not resolve to a commit, so use the empty tree, which is
-      // enough to reset the index and working tree to, until a commit is
-      // needed for stashing
-      this.head = this.git(['mktree']);
-      branchHasNoCommits = true;
-    }
-
     this.git(['status', '--porcelain', '--no-renames'])
       .split('\n')
       .filter((f) => f.length)
       .forEach((f) => (this.status[f.slice(3)] = f.slice(0, 2)));
 
-    // if there are no files in index or working tree, do not attempt to stash
+    // the staged state, which tasks run against, and which the working tree is
+    // reset to when reverting changes made by tasks
+    this.stagedTree = this.git(['write-tree']);
+
+    // if there are no files in index or working tree, do not create a backup
     if (Object.keys(this.status).length === 0) return;
-
-    if (branchHasNoCommits) {
-      // stashing requires a commit, so create an empty one; use plumbing
-      // commands instead of `git commit`, which would run the user's commit
-      // hooks (`--no-verify` does not skip all of them) and may try to sign
-      // the commit
-      this.head = this.git([
-        'commit-tree',
-        this.head,
-        '-m',
-        INITIAL_COMMIT_MESSAGE,
-      ]);
-
-      // empty old value ensures that the branch still does not exist
-      this.git(['update-ref', 'HEAD', this.head, '']);
-    }
 
     fs.mkdirSync(this.artifactsDir);
 
@@ -272,38 +248,27 @@ export class Stage {
     }
 
     try {
-      this.logger.debug(
-        '➡️ ➡️ Creating backup stash and hiding unstaged changes...',
+      this.logger.debug('➡️ ➡️ Creating backup and hiding unstaged changes...');
+
+      // record the working tree, including untracked files
+      fs.copyFileSync(this.indexPath, this.tempIndexPath);
+      this.git(['add', '-A'], this.tempIndexEnv);
+      const workingTree = this.git(['write-tree'], this.tempIndexEnv);
+
+      // store the backup before modifying the working tree
+      this.git(['update-ref', BACKUP_STAGED_TREE_REF, this.stagedTree]);
+      this.git(['update-ref', BACKUP_WORKING_TREE_REF, workingTree]);
+
+      this.backedUp = true;
+
+      // reset the working tree to the staged state, hiding unstaged changes
+      this.git(
+        ['read-tree', '-u', '--reset', this.stagedTree],
+        this.tempIndexEnv,
       );
-
-      this.git([
-        'stash',
-        'push',
-        '--include-untracked',
-        '--message',
-        BACKUP_STASH_MESSAGE,
-      ]);
-
-      this.stashed = true;
-
-      // stashing resets the index and working tree to HEAD, hiding staged
-      // changes along with unstaged ones; restore the staged state (the stash's
-      // index commit) so that tasks can run against it, as `--keep-index`
-      // would; `--keep-index` is not used because it fails if both the index
-      // and HEAD are empty (e.g. only untracked files on a branch with no
-      // commits)
-      this.git(['read-tree', '-u', '--reset', 'stash@{0}^2']);
     } catch (error) {
-      this.logger.log('⚠️ Error creating backup stash!');
+      this.logger.log('⚠️ Error creating backup!');
       throw error;
-    }
-
-    if (branchHasNoCommits) {
-      // the stash is based on the initial commit, which is no longer needed on
-      // the branch; delete the branch so that tasks run with it as it was,
-      // leaving the index and working tree as they are; old value ensures that
-      // HEAD still points to the commit
-      this.git(['update-ref', '-d', 'HEAD', this.head]);
     }
   }
 
@@ -364,17 +329,17 @@ export class Stage {
       throw error;
     }
 
-    if (!this.stashed) return;
+    if (!this.backedUp) return;
 
-    // attempt to retrieve the stash before running any damaging operations
-    const stash = this.findBackupStash();
+    // make sure that the backup exists before running any damaging operations
+    this.findBackup();
 
     try {
-      this.logger.debug('➡️ ➡️ Restoring unstaged changes from stash...');
+      this.logger.debug('➡️ ➡️ Restoring unstaged changes...');
 
       // save staged changes to keep them separate from unstaged changes in
       // patch, because `--3-way` adds unstaged changes to the index
-      const stagedTree = this.git(['write-tree']);
+      const newStagedTree = this.git(['write-tree']);
 
       // apply patch containing unstaged changes.
       // `--allow-empty` could be used here, but it was not added to `git apply`
@@ -400,14 +365,14 @@ export class Stage {
         .forEach((f) => fs.rmSync(path.resolve(this.cwd, f), { force: true }));
 
       // make sure all restored unstaged changes are kept out of the index
-      this.git(['read-tree', stagedTree]);
+      this.git(['read-tree', newStagedTree]);
 
       // clean up
+      this.deleteBackup();
       this.restoreMergeStatus();
       fs.rmSync(this.artifactsDir, { recursive: true });
-      this.git(['stash', 'drop', stash]);
     } catch (error) {
-      this.logger.log('⚠️ Error restoring unstaged changes from stash!');
+      this.logger.log('⚠️ Error restoring unstaged changes!');
       throw error;
     }
 
@@ -417,44 +382,47 @@ export class Stage {
   protected revert() {
     this.logger.log(stageLifecycleMessages.revert);
 
-    let stash: string | undefined;
+    let backup: Backup | undefined;
 
-    if (this.stashed) {
-      // attempt to retrieve the stash before running any damaging operations
-      stash = this.findBackupStash();
+    if (this.backedUp) {
+      // attempt to retrieve the backup before running any damaging operations
+      backup = this.findBackup();
     }
 
     try {
       this.logger.debug('➡️ ➡️ Reverting changes made by tasks...');
 
-      this.git(['add', '-A']);
-      // reset the index and working tree without moving the branch, which
-      // may have no commits
-      this.git(['read-tree', '-u', '--reset', this.head!]);
+      if (backup) {
+        this.restoreBackup(backup);
+      } else {
+        this.git(['add', '-A']);
+        this.git(['read-tree', '-u', '--reset', this.stagedTree!]);
+      }
     } catch (error) {
       this.logger.log('⚠️ Failed to revert changes made by tasks!');
       throw error;
     }
 
-    if (!this.stashed) return;
+    if (!this.backedUp) return;
 
     try {
-      this.logger.debug('➡️ ➡️ Restoring state from backup stash...');
+      this.logger.debug('➡️ ➡️ Cleaning up backup...');
 
-      this.git(['stash', 'apply', '--index', stash!]);
-      this.git(['stash', 'drop', stash!]);
+      this.deleteBackup();
       this.restoreMergeStatus();
       fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
-      this.logger.log('⚠️ Failed to restore state from backup stash!');
+      this.logger.log('⚠️ Failed to clean up backup!');
       throw error;
     }
   }
 
-  protected git(args: string[]): string {
-    this.logger.debug(`git: ${args.map((arg) => `[${arg}]`).join(' ')}`);
+  protected git(args: string[], env?: Record<string, string>): string {
+    this.logger.debug(
+      `git: ${args.map((arg) => `[${arg}]`).join(' ')}${env ? ` ${JSON.stringify(env)}` : ''}`,
+    );
 
-    const { stdout } = spawnSync(this.cwd, ['git', ...args]);
+    const { stdout } = spawnSync(this.cwd, ['git', ...args], env);
 
     this.logger.debug(stdout.replaceAll(/^/gm, '> '));
 
@@ -480,47 +448,64 @@ export class Stage {
     }
   }
 
-  private indexOfBackupStash(): number {
-    return this.git(['stash', 'list'])
-      .split('\n')
-      .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
+  private resolveRef(ref: string): string | undefined {
+    try {
+      return this.git(['rev-parse', '--verify', '-q', ref]);
+    } catch {
+      return undefined;
+    }
   }
 
-  private findBackupStash(): string {
-    const index = this.indexOfBackupStash();
+  private findBackup(): Backup {
+    const stagedTree = this.resolveRef(BACKUP_STAGED_TREE_REF);
+    const workingTree = this.resolveRef(BACKUP_WORKING_TREE_REF);
 
-    if (index === -1) {
-      throw new Error('missing backup stash');
+    if (!stagedTree || !workingTree) {
+      throw new Error('missing backup');
     }
 
-    return `stash@{${index}}`;
+    return { stagedTree, workingTree };
+  }
+
+  private restoreBackup({ stagedTree, workingTree }: Backup) {
+    fs.copyFileSync(this.indexPath, this.tempIndexPath);
+    this.git(['add', '-A'], this.tempIndexEnv);
+    this.git(['read-tree', '-u', '--reset', workingTree], this.tempIndexEnv);
+    this.git(['read-tree', stagedTree]);
+  }
+
+  private deleteBackup() {
+    for (const ref of [BACKUP_WORKING_TREE_REF, BACKUP_STAGED_TREE_REF]) {
+      if (this.resolveRef(ref)) {
+        this.git(['update-ref', '-d', ref]);
+      }
+    }
   }
 
   public recover() {
-    const stashIndex = this.indexOfBackupStash();
-    const stashFound = stashIndex !== -1;
+    const stagedTree = this.resolveRef(BACKUP_STAGED_TREE_REF);
+    const workingTree = this.resolveRef(BACKUP_WORKING_TREE_REF);
     const artifactsFound = fs.existsSync(this.artifactsDir);
 
-    if (!stashFound && !artifactsFound) {
+    if (!stagedTree && !workingTree && !artifactsFound) {
       this.logger.log('➡️ Nothing to recover.');
       return;
     }
 
-    if (stashFound) {
-      const stash = `stash@{${stashIndex}}`;
+    if (stagedTree && workingTree) {
+      this.logger.log('➡️ Found backup, restoring...');
 
-      this.logger.log('➡️ Found backup stash, restoring...');
-
-      const head = this.git(['rev-parse', `${stash}^1`]);
-
-      this.git(['add', '-A']);
-      this.git(['read-tree', '-u', '--reset', head]);
-      this.git(['stash', 'apply', '--index', stash]);
-      this.git(['stash', 'drop', stash]);
+      // the temporary index is stored in the artifacts directory
+      fs.mkdirSync(this.artifactsDir, { recursive: true });
+      this.restoreBackup({ stagedTree, workingTree });
     }
 
-    if (artifactsFound) {
-      this.logger.log('➡️ Found artifacts directory, cleaning up...');
+    this.deleteBackup();
+
+    if (fs.existsSync(this.artifactsDir)) {
+      if (artifactsFound) {
+        this.logger.log('➡️ Found artifacts directory, cleaning up...');
+      }
 
       for (const mergeFile of MERGE_FILES) {
         const src = path.resolve(this.artifactsDir, mergeFile);
