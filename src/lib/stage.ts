@@ -469,9 +469,8 @@ export class Stage {
 
   private deleteBackup() {
     for (const ref of [BACKUP_WORKING_TREE_REF, BACKUP_STAGED_TREE_REF]) {
-      if (this.resolveRef(ref)) {
-        this.git(['update-ref', '-d', ref]);
-      }
+      // succeeds even if the ref does not exist
+      this.git(['update-ref', '-d', ref]);
     }
   }
 
