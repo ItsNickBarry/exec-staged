@@ -26,6 +26,7 @@ export class Stage {
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private stagedTree?: string;
   private _gitDir?: string;
+  private _indexPath?: string;
   private needsRevert: boolean = false;
 
   private get gitDir(): string {
@@ -44,10 +45,10 @@ export class Stage {
   // git because it may differ from the default (`<git dir>/index`) depending on
   // execution context
   private get indexPath(): string {
-    return path.resolve(
+    return (this._indexPath ??= path.resolve(
       this.cwd,
       this.git(['rev-parse', '--git-path', 'index']),
-    );
+    ));
   }
 
   private get tempIndexPath(): string {
