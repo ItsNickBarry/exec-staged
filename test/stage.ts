@@ -293,6 +293,22 @@ describe('Stage', () => {
       assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
     });
 
+    it('does not hide staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      assert.equal(
+        stage.git(['status', '--porcelain']),
+        'D  test.txt\n?? test.txt',
+      );
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
+    });
+
     it('does not hide staged renames', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
@@ -717,6 +733,21 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
+    it('maintains staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
+    });
+
     it('maintains staged renames', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
@@ -1011,6 +1042,21 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
+    });
+
+    it('restores staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
     });
 
     it('restores renamed files', async () => {

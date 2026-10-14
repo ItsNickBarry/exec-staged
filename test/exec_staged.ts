@@ -160,6 +160,17 @@ describe('execStaged', () => {
     assert.equal(result, true);
   });
 
+  it('does not hide staged deletions of files present in working tree from tasks', async () => {
+    stage.writeFile('test.txt', 'contents');
+    stage.git(['add', 'test.txt']);
+    stage.git(['commit', '-m', 'add file']);
+    stage.git(['rm', '--cached', 'test.txt']);
+
+    const result = await stage.execStaged([TASK_ASSERT_NO_UNSTAGED_CHANGES]);
+
+    assert.equal(result, true);
+  });
+
   // TODO: test merge
 
   it('restores staged additions on task failure', async () => {
@@ -263,10 +274,12 @@ describe('execStaged', () => {
     stage.writeFile('subdirectory/test.txt');
     stage.writeFile('test-D.txt');
     stage.writeFile('test-M.txt', 'old contents');
-    stage.git(['add', 'test-D.txt', 'test-M.txt']);
+    stage.writeFile('test-staged-D.txt', 'contents');
+    stage.git(['add', 'test-D.txt', 'test-M.txt', 'test-staged-D.txt']);
     stage.git(['commit', '-m', 'add files']);
     stage.rm('test-D.txt');
     stage.writeFile('test-M.txt', 'new contents');
+    stage.git(['rm', '--cached', 'test-staged-D.txt']);
 
     const oldStatus = stage.git(['status', '-v']);
     const result = await stage.execStaged(['rm test-M.txt']);
@@ -274,6 +287,7 @@ describe('execStaged', () => {
 
     assert.equal(result, false);
     assert.equal(newStatus, oldStatus);
+    assert.equal(stage.readFile('test-staged-D.txt'), 'contents');
   });
 
   describe('if branch has no commits', () => {
