@@ -416,6 +416,32 @@ describe('Stage', () => {
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
       assert.equal(newStatusPorcelain, 'M  test.txt');
     });
+
+    it('reverts if hiding unstaged changes fails', async () => {
+      stage.writeFile('test.txt', 'old contents');
+      stage.writeFile('readonly/test.txt', 'old contents');
+      stage.git(['add', 'test.txt', 'readonly/test.txt']);
+      stage.writeFile('test.txt', 'new contents');
+      stage.writeFile('readonly/test.txt', 'new contents');
+
+      // git can hide changes to test.txt, but fails on readonly/test.txt
+      // because replacing a file requires write permission on its directory;
+      // root bypasses permission checks, so the test fails if run as root
+      stage.chmod('readonly', 0o555);
+
+      try {
+        const oldStatus = stage.git(['status', '-z']);
+        assert.throws(() => stage.prepare());
+        const newStatus = stage.git(['status', '-z']);
+
+        assert.equal(newStatus, oldStatus);
+        assert.equal(stage.readFile('test.txt'), 'new contents');
+        assert(!stage.hasBackup());
+      } finally {
+        // allow the directory to be cleaned up
+        stage.chmod('readonly', 0o755);
+      }
+    });
   });
 
   describe('::run', () => {

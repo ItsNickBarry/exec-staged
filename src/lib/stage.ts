@@ -233,6 +233,18 @@ export class Stage {
       );
     } catch (error) {
       this.logger.log('⚠️ Error creating backup!');
+      this.logger.debug(error);
+
+      // the working tree may have been modified before the error
+      if (this.backedUp) {
+        try {
+          // TODO: make consistent with revert handling in exec
+          this.revert();
+        } catch (error) {
+          this.logger.debug(error);
+        }
+      }
+
       throw error;
     }
   }
