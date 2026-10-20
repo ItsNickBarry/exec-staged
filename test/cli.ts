@@ -1,4 +1,7 @@
-import { stageLifecycleMessages } from '../src/lib/constants';
+import {
+  BACKUP_WORKING_TREE_REF,
+  stageLifecycleMessages,
+} from '../src/lib/constants';
 import {
   TASK_APPEND_FILES,
   TASK_EXIT_0,
@@ -10,6 +13,7 @@ import assert from 'node:assert';
 import child_process, { type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const BIN = path.resolve(import.meta.dirname, '../dist/bin/cli.js');
 
@@ -135,6 +139,58 @@ describe('CLI', () => {
     assert(!stage.hasBackup());
     // assert that HEAD still does not resolve to a commit
     assert.throws(() => stage.git(['rev-parse', '--verify', '-q', 'HEAD']));
+  });
+
+  it('reverts state on process interrupt during prepare stage', async () => {
+    // pause the prepare stage after the backup is created, so that the interrupt
+    // is received before the prepare stage completes
+    stage.writeFile(
+      '.git/hooks/reference-transaction',
+      [
+        '#!/bin/sh',
+        '[ "$1" = committed ] || exit 0',
+        'while read -r old new ref; do',
+        `  if [ "$ref" = '${BACKUP_WORKING_TREE_REF}' ] && [ "$new" != "\${new#*[!0]}" ]; then`,
+        '    sleep 1',
+        '  fi',
+        'done',
+      ].join('\n'),
+    );
+    stage.chmod('.git/hooks/reference-transaction', 0o755);
+
+    stage.writeFile('test.txt');
+
+    const oldStatus = stage.git(['status', '-z']);
+
+    const child = child_process.spawn('node', [BIN, TASK_SLEEP], {
+      cwd: stage.cwd,
+    });
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+
+    while (!stage.hasBackup() && child.exitCode === null) {
+      await sleep(10);
+    }
+
+    // assert that the prepare stage has started but not completed
+    assert(output.includes(stageLifecycleMessages.prepare));
+    assert(!output.includes(stageLifecycleMessages.run));
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
+
+    await closed;
+
+    const newStatus = stage.git(['status', '-z']);
+
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
+    assert.equal(newStatus, oldStatus);
+    assert(!stage.hasBackup());
   });
 
   it('loads config from file', async () => {
