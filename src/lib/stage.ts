@@ -12,8 +12,8 @@ import { spawn, spawnSync } from './spawn.js';
 import micromatch from 'micromatch';
 import fs from 'node:fs';
 import path from 'node:path';
-import { deregisterExitHandler, registerExitHandler } from 'on-process-exit';
 import semver from 'semver';
+import { onExit } from 'signal-exit';
 import parseArgsStringToArgv from 'string-argv';
 
 type Backup = { stagedTree: string; workingTree: string };
@@ -78,7 +78,7 @@ export class Stage {
 
     this.needsRevert = true;
 
-    const exitHandlerId = registerExitHandler(() => {
+    const removeExitHandler = onExit(() => {
       if (this.needsRevert) {
         this.needsRevert = false;
         this.revert();
@@ -100,7 +100,7 @@ export class Stage {
 
       throw error;
     } finally {
-      deregisterExitHandler(exitHandlerId);
+      removeExitHandler();
     }
   }
 

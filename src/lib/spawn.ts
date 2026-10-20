@@ -1,5 +1,5 @@
 import { execa, execaSync } from 'execa';
-import { registerExitHandler, deregisterExitHandler } from 'on-process-exit';
+import { onExit } from 'signal-exit';
 
 /**
  * Spawn a child process asynchronously using the `execa` package.
@@ -20,8 +20,10 @@ export const spawn = async (cwd: string, args: string[]) => {
     stdout: ['pipe', 'inherit'],
   })(args[0], args.slice(1));
 
-  const id = registerExitHandler(() => subprocess.kill());
-  subprocess.once('close', () => deregisterExitHandler(id));
+  const removeExitHandler = onExit(() => {
+    subprocess.kill();
+  });
+  subprocess.once('close', removeExitHandler);
 
   return subprocess;
 };
@@ -29,7 +31,7 @@ export const spawn = async (cwd: string, args: string[]) => {
 /**
  * Spawn a child process synchronously using the `execa` package.
  * This is used to run `git` commands.  A synchronous API is required because
- * cleanup operations may be run via `on-process-exit`.
+ * cleanup operations may be run via `signal-exit`.
  *
  * @param cwd Directory where command should be executed.
  * @param args Command string or array of command tokens.

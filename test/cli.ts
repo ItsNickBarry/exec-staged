@@ -81,7 +81,8 @@ describe('CLI', () => {
 
     const newStatus = stage.git(['status', '-z']);
 
-    assert.equal(child.exitCode, 143);
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
     assert.equal(newStatus, oldStatus);
     assert(!stage.hasBackup());
   });
@@ -118,7 +119,8 @@ describe('CLI', () => {
 
     const newStatus = stage.git(['status', '-z']);
 
-    assert.equal(child.exitCode, 143);
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
     assert.equal(newStatus, oldStatus);
     assert(!stage.hasBackup());
     // assert that HEAD still does not resolve to a commit

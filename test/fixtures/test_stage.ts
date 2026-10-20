@@ -15,7 +15,7 @@ import envPaths from 'env-paths';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
-import { registerExitHandler } from 'on-process-exit';
+import { onExit } from 'signal-exit';
 import parseArgsStringToArgv from 'string-argv';
 
 const TEST_STAGE_OPTIONS: StageOptions = { quiet: true };
@@ -92,7 +92,7 @@ export class TestStage extends Stage {
   public static create() {
     const cwd = path.resolve(envPaths(pkg.name).temp, crypto.randomUUID());
 
-    registerExitHandler(() => {
+    onExit(() => {
       fs.rmSync(cwd, { recursive: true, force: true });
     });
 
