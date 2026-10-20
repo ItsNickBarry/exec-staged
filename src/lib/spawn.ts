@@ -23,7 +23,7 @@ export const spawn = async (cwd: string, args: string[]) => {
   const removeExitHandler = onExit(() => {
     subprocess.kill();
   });
-  subprocess.once('close', removeExitHandler);
+  subprocess.nodeChildProcess.once('close', removeExitHandler);
 
   return subprocess;
 };
