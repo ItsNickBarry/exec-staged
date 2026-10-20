@@ -1,3 +1,4 @@
+import { stageLifecycleMessages } from '../src/lib/constants';
 import {
   TASK_APPEND_FILES,
   TASK_EXIT_0,
@@ -6,11 +7,25 @@ import {
 } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
-import child_process from 'node:child_process';
+import child_process, { type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
 
 const BIN = path.resolve(import.meta.dirname, '../dist/bin/cli.js');
+
+// wait until the subprocess reports that tasks are running; resolves false if
+// the subprocess exits first
+const waitForTasks = (child: ChildProcess) =>
+  new Promise<boolean>((resolve) => {
+    let output = '';
+
+    child.stdout!.on('data', (data) => {
+      output += data;
+      if (output.includes(stageLifecycleMessages.run)) resolve(true);
+    });
+
+    child.once('close', () => resolve(false));
+  });
 
 const installPreCommitHook = (stage: TestStage, task: string) => {
   // wrap in single quotes for sh, escaping any single quotes within
@@ -71,11 +86,10 @@ describe('CLI', () => {
       child.once('close', () => resolve());
     });
 
-    setTimeout(() => {
-      assert(stage.hasBackup());
-      // assert that kill signal was received before process ended normally
-      assert(child.kill());
-    }, 750);
+    assert(await waitForTasks(child));
+    assert(stage.hasBackup());
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
 
     await closed;
 
@@ -106,16 +120,12 @@ describe('CLI', () => {
       child.once('close', () => resolve());
     });
 
-    const timeout = setTimeout(() => {
-      assert(stage.hasBackup());
-      // assert that kill signal was received before process ended normally
-      assert(child.kill());
-    }, 750);
+    assert(await waitForTasks(child));
+    assert(stage.hasBackup());
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
 
     await closed;
-
-    // if the process ended early, don't attempt to kill it
-    clearTimeout(timeout);
 
     const newStatus = stage.git(['status', '-z']);
 
