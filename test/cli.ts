@@ -179,6 +179,10 @@ describe('CLI', () => {
   });
 
   it('reports error and returns exit code 1 if config throws while loading', async () => {
+    // on Node.js 24 releases before 24.5.0, require() of an ES module whose
+    // import() failed throws ERR_INTERNAL_ASSERTION, which cosmiconfig reports
+    // instead of the original error, causing this test to fail
+    // see https://github.com/nodejs/node/pull/58957
     stage.writeFile(
       'exec-staged.config.ts',
       `throw new Error('config load test error');`,
