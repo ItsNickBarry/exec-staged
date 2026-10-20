@@ -147,6 +147,51 @@ describe('CLI', () => {
     assert.equal(child.exitCode, 1);
   });
 
+  it('reports error and returns exit code 1 if config is invalid', async () => {
+    stage.writeFile('exec-staged.config.ts', `export default [{}];`);
+
+    const child = child_process.spawn('node', [BIN], {
+      cwd: stage.cwd,
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+    child.stderr.on('data', (data) => (output += data));
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 1);
+    assert(output.includes('invalid config'));
+  });
+
+  it('reports error and returns exit code 1 if config throws while loading', async () => {
+    stage.writeFile(
+      'exec-staged.config.ts',
+      `throw new Error('config load test error');`,
+    );
+
+    const child = child_process.spawn('node', [BIN], {
+      cwd: stage.cwd,
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+    child.stderr.on('data', (data) => (output += data));
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 1);
+    assert(output.includes('config load test error'));
+  });
+
   it('recovers from failed run', async () => {
     stage.writeFile('test.txt', 'staged contents');
     stage.git(['add', 'test.txt']);
