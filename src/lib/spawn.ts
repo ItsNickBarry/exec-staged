@@ -33,9 +33,15 @@ export const spawn = async (cwd: string, args: string[]) => {
  *
  * @param cwd Directory where command should be executed.
  * @param args Command string or array of command tokens.
+ * @param env Environment variables to set, in addition to those of the current
+ * process.
  * @throws ExecaSyncError
  * @returns Execa `SyncResult`.
  */
-export const spawnSync = (cwd: string, args: string[]) => {
-  return execaSync({ cwd })(args[0], args.slice(1));
+export const spawnSync = (
+  cwd: string,
+  args: string[],
+  env?: Record<string, string>,
+) => {
+  return execaSync({ cwd, env })(args[0], args.slice(1));
 };

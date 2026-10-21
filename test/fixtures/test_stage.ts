@@ -1,4 +1,8 @@
 import pkg from '../../package.json';
+import {
+  BACKUP_STAGED_TREE_REF,
+  BACKUP_WORKING_TREE_REF,
+} from '../../src/lib/constants.js';
 import { execStaged, recoverStaged } from '../../src/lib/exec_staged.js';
 import { spawnSync } from '../../src/lib/spawn.js';
 import { Stage } from '../../src/lib/stage.js';
@@ -34,7 +38,7 @@ export class TestStage extends Stage {
     return fs.readFileSync(this.resolve(relativePath), 'utf-8');
   }
 
-  public writeFile(relativePath: string, contents: string = '') {
+  public writeFile(relativePath: string, contents: string | Uint8Array = '') {
     const absolutePath = this.resolve(relativePath);
     fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
     fs.writeFileSync(absolutePath, contents);
@@ -66,6 +70,14 @@ export class TestStage extends Stage {
 
   public recoverStaged(): boolean {
     return recoverStaged(this.cwd);
+  }
+
+  public hasBackup(): boolean {
+    return !!this.git([
+      'for-each-ref',
+      BACKUP_STAGED_TREE_REF,
+      BACKUP_WORKING_TREE_REF,
+    ]);
   }
 
   public spawnSync(task: string) {

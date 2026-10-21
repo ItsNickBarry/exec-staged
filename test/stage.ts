@@ -1,9 +1,9 @@
 import {
   ARTIFACTS_DIRECTORY,
-  BACKUP_STASH_MESSAGE,
+  BACKUP_STAGED_TREE_REF,
+  BACKUP_WORKING_TREE_REF,
   DEFAULT_CONFIG_ENTRY,
   INTERPOLATION_IDENTIFIER,
-  STAGED_CHANGES_COMMIT_MESSAGE,
 } from '../src/lib/constants';
 import { TASK_EXIT_0, TASK_EXIT_1, TASK_RM_FILES } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
@@ -78,28 +78,30 @@ describe('Stage', () => {
       );
     });
 
-    it('throws if backup stash from previous run is present', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['stash', '--all', '-m', BACKUP_STASH_MESSAGE]);
-
-      assert.throws(() => stage.check(), /unexpected backup stash/);
-    });
-
     it('throws if artifacts directory from previous run is present', async () => {
       stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
 
       assert.throws(() => stage.check(), /unexpected artifacts directory/);
     });
 
-    it('throws if temporary commit from previous run is present', async () => {
+    it('throws if backup staged tree ref from previous run is present', async () => {
       stage.git([
-        'commit',
-        '--allow-empty',
-        '-m',
-        STAGED_CHANGES_COMMIT_MESSAGE,
+        'update-ref',
+        BACKUP_STAGED_TREE_REF,
+        stage.git(['write-tree']),
       ]);
 
-      assert.throws(() => stage.check(), /unexpected temporary commit/);
+      assert.throws(() => stage.check(), /unexpected backup/);
+    });
+
+    it('throws if backup working tree ref from previous run is present', async () => {
+      stage.git([
+        'update-ref',
+        BACKUP_WORKING_TREE_REF,
+        stage.git(['write-tree']),
+      ]);
+
+      assert.throws(() => stage.check(), /unexpected backup/);
     });
 
     it('throws if git directory is a symlink pointing inside repository', async () => {
@@ -114,32 +116,32 @@ describe('Stage', () => {
   });
 
   describe('::prepare', () => {
-    it('does not create a stash if no changes are in index or working tree', async () => {
+    it('does not create a backup if no changes are in index or working tree', async () => {
       stage.prepare();
 
-      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.hasBackup());
     });
 
-    it('creates a stash with unstaged additions', async () => {
+    it('creates a backup with unstaged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with staged additions', async () => {
+    it('creates a backup with staged additions', async () => {
       stage.writeFile('test.txt');
       stage.writeFile('subdirectory/test.txt');
       stage.git(['add', 'test.txt', 'subdirectory/test.txt']);
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with unstaged modifications', async () => {
+    it('creates a backup with unstaged modifications', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -147,10 +149,10 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with staged modifications', async () => {
+    it('creates a backup with staged modifications', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -159,20 +161,20 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with unstaged modifications to staged file', async () => {
+    it('creates a backup with unstaged modifications to staged file', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'new contents');
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with unstaged deletions', async () => {
+    it('creates a backup with unstaged deletions', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -180,10 +182,10 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with staged deletions', async () => {
+    it('creates a backup with staged deletions', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.git(['commit', '-m', 'add file']);
@@ -192,10 +194,10 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
-    it('creates a stash with renamed files', async () => {
+    it('creates a backup with renamed files', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
       stage.git(['commit', '-m', 'add file']);
@@ -204,7 +206,7 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      assert(stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(stage.hasBackup());
     });
 
     it('hides unstaged additions', async () => {
@@ -285,6 +287,22 @@ describe('Stage', () => {
       stage.git(['add', 'test.txt']);
 
       assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'D  test.txt');
+    });
+
+    it('does not hide staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      assert.equal(
+        stage.git(['status', '--porcelain']),
+        'D  test.txt\n?? test.txt',
+      );
 
       stage.prepare();
 
@@ -393,9 +411,36 @@ describe('Stage', () => {
       const newStatus = stage.git(['status']);
       const newStatusPorcelain = stage.git(['status', '--porcelain']);
 
-      assert.notEqual(newStatus, oldStatus);
+      // merge state is preserved
+      assert.equal(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
       assert.equal(newStatusPorcelain, 'M  test.txt');
+    });
+
+    it('reverts if hiding unstaged changes fails', async () => {
+      stage.writeFile('test.txt', 'old contents');
+      stage.writeFile('readonly/test.txt', 'old contents');
+      stage.git(['add', 'test.txt', 'readonly/test.txt']);
+      stage.writeFile('test.txt', 'new contents');
+      stage.writeFile('readonly/test.txt', 'new contents');
+
+      // git can hide changes to test.txt, but fails on readonly/test.txt
+      // because replacing a file requires write permission on its directory;
+      // root bypasses permission checks, so the test fails if run as root
+      stage.chmod('readonly', 0o555);
+
+      try {
+        const oldStatus = stage.git(['status', '-z']);
+        assert.throws(() => stage.prepare());
+        const newStatus = stage.git(['status', '-z']);
+
+        assert.equal(newStatus, oldStatus);
+        assert.equal(stage.readFile('test.txt'), 'new contents');
+        assert(!stage.hasBackup());
+      } finally {
+        // allow the directory to be cleaned up
+        stage.chmod('readonly', 0o755);
+      }
     });
   });
 
@@ -565,7 +610,7 @@ describe('Stage', () => {
   });
 
   describe('::merge', () => {
-    it('does nothing if no backup stash exists and no changes were made by tasks', async () => {
+    it('does nothing if no backup exists and no changes were made by tasks', async () => {
       stage.prepare();
 
       stage.writeFile('test.txt');
@@ -685,6 +730,26 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'new contents');
     });
 
+    it('restores unstaged modifications containing non-UTF-8 bytes', async () => {
+      // latin1-encoded "café", which is not valid UTF-8
+      const contents = Buffer.from('caf\xe9\n', 'latin1');
+
+      stage.writeFile('test.txt', 'old contents\n');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('test.txt', contents);
+
+      const oldStatus = stage.git(['status', '-z']);
+      const oldHash = stage.git(['hash-object', 'test.txt']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+      const newHash = stage.git(['hash-object', 'test.txt']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(newHash, oldHash);
+    });
+
     it('restores unstaged deletions', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
@@ -712,6 +777,21 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
+    });
+
+    it('maintains staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.merge();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
     });
 
     it('maintains staged renames', async () => {
@@ -824,45 +904,52 @@ describe('Stage', () => {
       assert.equal(newStatusPorcelain, 'M  test.txt');
     });
 
-    it('throws if expected backup stash is not found', async () => {
+    it('throws if expected backup is not found', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'new contents');
 
       stage.prepare();
-      stage.git(['stash', 'clear']);
+      stage.git(['update-ref', '-d', BACKUP_WORKING_TREE_REF]);
 
       const oldStatus = stage.git(['status', '-z']);
-      assert.throws(() => stage.merge(), /missing backup stash/);
+      assert.throws(() => stage.merge(), /missing backup/);
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'old contents');
     });
 
-    it('drops backup stash', async () => {
+    it('deletes backup', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
       stage.prepare();
       stage.merge();
 
-      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.hasBackup());
     });
 
-    it('resets temporary staged changes commit', async () => {
+    it('preserves index stat data of unchanged files', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('untracked.txt');
 
+      const oldStat = stage.git(['ls-files', '--debug', 'test.txt']);
       stage.prepare();
       stage.merge();
+      const newStat = stage.git(['ls-files', '--debug', 'test.txt']);
 
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
+      assert.equal(
+        newStat.match(/mtime: .*/)?.[0],
+        oldStat.match(/mtime: .*/)?.[0],
+      );
     });
   });
 
   describe('::revert', () => {
-    it('does nothing if no backup stash exists and no files are changed by tasks', async () => {
+    it('does nothing if no backup exists and no files are changed by tasks', async () => {
       stage.prepare();
 
       stage.writeFile('test.txt');
@@ -1020,6 +1107,21 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
+    it('restores staged deletions of files present in working tree', async () => {
+      stage.writeFile('test.txt', 'contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.git(['rm', '--cached', 'test.txt']);
+
+      const oldStatus = stage.git(['status', '-z']);
+      stage.prepare();
+      stage.revert();
+      const newStatus = stage.git(['status', '-z']);
+
+      assert.equal(newStatus, oldStatus);
+      assert.equal(stage.readFile('test.txt'), 'contents');
+    });
+
     it('restores renamed files', async () => {
       stage.writeFile('test.old', 'contents');
       stage.git(['add', 'test.old']);
@@ -1078,40 +1180,47 @@ describe('Stage', () => {
       assert.equal(newStatusPorcelain, 'M  test.txt');
     });
 
-    it('drops backup stash', async () => {
+    it('deletes backup', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
       stage.prepare();
       stage.revert();
 
-      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.hasBackup());
     });
 
-    it('resets temporary staged changes commit', async () => {
-      stage.writeFile('test.txt');
-      stage.git(['add', 'test.txt']);
-
-      stage.prepare();
-      stage.revert();
-
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
-    });
-
-    it('throws if expected backup stash is not found', async () => {
+    it('throws if expected backup is not found', async () => {
       stage.writeFile('test.txt', 'old contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'new contents');
 
       stage.prepare();
-      stage.git(['stash', 'clear']);
+      stage.git(['update-ref', '-d', BACKUP_WORKING_TREE_REF]);
 
       const oldStatus = stage.git(['status', '-z']);
-      assert.throws(() => stage.revert(), /missing backup stash/);
+      assert.throws(() => stage.revert(), /missing backup/);
       const newStatus = stage.git(['status', '-z']);
 
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'old contents');
+    });
+
+    it('preserves index stat data of unchanged files', async () => {
+      stage.writeFile('test.txt');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+      stage.writeFile('untracked.txt');
+
+      const oldStat = stage.git(['ls-files', '--debug', 'test.txt']);
+      stage.prepare();
+      stage.revert();
+      const newStat = stage.git(['ls-files', '--debug', 'test.txt']);
+
+      assert.equal(
+        newStat.match(/mtime: .*/)?.[0],
+        oldStat.match(/mtime: .*/)?.[0],
+      );
     });
   });
 
@@ -1133,7 +1242,7 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('restores state from backup stash', async () => {
+    it('restores state from backup', async () => {
       stage.writeFile('test.txt', 'staged contents');
       stage.git(['add', 'test.txt']);
       stage.writeFile('test.txt', 'unstaged contents');
@@ -1146,32 +1255,6 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'unstaged contents');
-    });
-
-    it('restores state from backup stash with temporary commit present', async () => {
-      stage.writeFile('test.txt', 'staged contents');
-      stage.git(['add', 'test.txt']);
-      stage.writeFile('test.txt', 'unstaged contents');
-
-      const oldStatus = stage.git(['status', '-z']);
-
-      stage.prepare();
-
-      stage.git(['add', '-A']);
-      stage.git([
-        'commit',
-        '--allow-empty',
-        '--no-verify',
-        '-m',
-        STAGED_CHANGES_COMMIT_MESSAGE,
-      ]);
-
-      stage.recover();
-
-      const newStatus = stage.git(['status', '-z']);
-      assert.equal(newStatus, oldStatus);
-      assert.equal(stage.readFile('test.txt'), 'unstaged contents');
-      assert(!stage.git(['log']).includes(STAGED_CHANGES_COMMIT_MESSAGE));
     });
 
     it('removes artifacts directory', async () => {
@@ -1205,16 +1288,20 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      // simulate failure during revert after stash drop but before merge restore
-      const stashIndex = stage
-        .git(['stash', 'list'])
-        .split('\n')
-        .findIndex((el) => el.includes(BACKUP_STASH_MESSAGE));
-      const stash = `stash@{${stashIndex}}`;
+      // simulate a task's removing merge status, leaving the copies in the
+      // artifacts directory as the only record of it
+      stage.git(['merge', '--quit']);
+      assert.notEqual(stage.git(['status']), oldStatus);
+
+      // simulate failure during revert after backup deletion but before merge
+      // restore
+      const stagedTree = stage.git(['rev-parse', BACKUP_STAGED_TREE_REF]);
+      const workingTree = stage.git(['rev-parse', BACKUP_WORKING_TREE_REF]);
       stage.git(['add', '-A']);
-      stage.git(['reset', '--hard', 'HEAD']);
-      stage.git(['stash', 'apply', '--index', stash]);
-      stage.git(['stash', 'drop', stash]);
+      stage.git(['read-tree', '-u', '--reset', workingTree]);
+      stage.git(['read-tree', stagedTree]);
+      stage.git(['update-ref', '-d', BACKUP_WORKING_TREE_REF]);
+      stage.git(['update-ref', '-d', BACKUP_STAGED_TREE_REF]);
 
       stage.recover();
 
@@ -1222,14 +1309,14 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
     });
 
-    it('drops backup stash', async () => {
+    it('deletes backup', async () => {
       stage.writeFile('test.txt');
       stage.git(['add', 'test.txt']);
 
       stage.prepare();
       stage.recover();
 
-      assert(!stage.git(['stash', 'list']).includes(BACKUP_STASH_MESSAGE));
+      assert(!stage.hasBackup());
     });
   });
 });
