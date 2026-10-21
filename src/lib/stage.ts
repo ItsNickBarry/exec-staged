@@ -12,8 +12,8 @@ import { spawn, spawnSync } from './spawn.js';
 import micromatch from 'micromatch';
 import fs from 'node:fs';
 import path from 'node:path';
-import { deregisterExitHandler, registerExitHandler } from 'on-process-exit';
 import semver from 'semver';
+import { onExit } from 'signal-exit';
 import parseArgsStringToArgv from 'string-argv';
 
 type Backup = { stagedTree: string; workingTree: string };
@@ -68,17 +68,12 @@ export class Stage {
   }
 
   public async exec(tasks: ExecStagedConfig) {
-    try {
-      this.check();
-      this.prepare();
-    } catch (error) {
-      this.logger.debug(error);
-      throw error;
-    }
-
-    this.needsRevert = true;
-
-    const exitHandlerId = registerExitHandler(() => {
+    // register the exit handler before modifying the repository; signal-exit
+    // only listens for signals while a handler is registered, and without a
+    // listener a signal received during the synchronous prepare step would
+    // terminate the process immediately, leaving the backup in place and
+    // unstaged changes hidden
+    const removeExitHandler = onExit(() => {
       if (this.needsRevert) {
         this.needsRevert = false;
         this.revert();
@@ -86,21 +81,33 @@ export class Stage {
     });
 
     try {
-      await this.run(tasks);
-      this.merge();
-    } catch (error) {
-      this.logger.debug(error);
-
       try {
-        this.needsRevert = false;
-        this.revert();
+        this.check();
+        this.prepare();
       } catch (error) {
         this.logger.debug(error);
+        throw error;
       }
 
-      throw error;
+      this.needsRevert = true;
+
+      try {
+        await this.run(tasks);
+        this.merge();
+      } catch (error) {
+        this.logger.debug(error);
+
+        try {
+          this.needsRevert = false;
+          this.revert();
+        } catch (error) {
+          this.logger.debug(error);
+        }
+
+        throw error;
+      }
     } finally {
-      deregisterExitHandler(exitHandlerId);
+      removeExitHandler();
     }
   }
 
