@@ -26,6 +26,7 @@ export class Stage {
   private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private stagedTree?: string;
   private _gitDir?: string;
+  private _indexPath?: string;
   private needsRevert: boolean = false;
 
   private get gitDir(): string {
@@ -44,10 +45,10 @@ export class Stage {
   // git because it may differ from the default (`<git dir>/index`) depending on
   // execution context
   private get indexPath(): string {
-    return path.resolve(
+    return (this._indexPath ??= path.resolve(
       this.cwd,
       this.git(['rev-parse', '--git-path', 'index']),
-    );
+    ));
   }
 
   private get tempIndexPath(): string {
@@ -232,6 +233,18 @@ export class Stage {
       );
     } catch (error) {
       this.logger.log('⚠️ Error creating backup!');
+      this.logger.debug(error);
+
+      // the working tree may have been modified before the error
+      if (this.backedUp) {
+        try {
+          // TODO: make consistent with revert handling in exec
+          this.revert();
+        } catch (error) {
+          this.logger.debug(error);
+        }
+      }
+
       throw error;
     }
   }
@@ -357,7 +370,7 @@ export class Stage {
         .forEach((f) => fs.rmSync(path.resolve(this.cwd, f), { force: true }));
 
       // make sure all restored unstaged changes are kept out of the index
-      this.git(['read-tree', newStagedTree]);
+      this.git(['read-tree', '--reset', newStagedTree]);
 
       // clean up
       this.deleteBackup();
@@ -463,14 +476,13 @@ export class Stage {
     fs.copyFileSync(this.indexPath, this.tempIndexPath);
     this.git(['add', '-A'], this.tempIndexEnv);
     this.git(['read-tree', '-u', '--reset', workingTree], this.tempIndexEnv);
-    this.git(['read-tree', stagedTree]);
+    this.git(['read-tree', '--reset', stagedTree]);
   }
 
   private deleteBackup() {
     for (const ref of [BACKUP_WORKING_TREE_REF, BACKUP_STAGED_TREE_REF]) {
-      if (this.resolveRef(ref)) {
-        this.git(['update-ref', '-d', ref]);
-      }
+      // succeeds even if the ref does not exist
+      this.git(['update-ref', '-d', ref]);
     }
   }
 
