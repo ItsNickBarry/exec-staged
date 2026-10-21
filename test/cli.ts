@@ -1,4 +1,8 @@
 import {
+  BACKUP_WORKING_TREE_REF,
+  stageLifecycleMessages,
+} from '../src/lib/constants';
+import {
   TASK_APPEND_FILES,
   TASK_EXIT_0,
   TASK_EXIT_1,
@@ -6,11 +10,26 @@ import {
 } from './fixtures/tasks';
 import { TestStage } from './fixtures/test_stage';
 import assert from 'node:assert';
-import child_process from 'node:child_process';
+import child_process, { type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { describe, it, beforeEach } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const BIN = path.resolve(import.meta.dirname, '../dist/bin/cli.js');
+
+// wait until the subprocess reports that tasks are running; resolves false if
+// the subprocess exits first
+const waitForTasks = (child: ChildProcess) =>
+  new Promise<boolean>((resolve) => {
+    let output = '';
+
+    child.stdout!.on('data', (data) => {
+      output += data;
+      if (output.includes(stageLifecycleMessages.run)) resolve(true);
+    });
+
+    child.once('close', () => resolve(false));
+  });
 
 const installPreCommitHook = (stage: TestStage, task: string) => {
   // wrap in single quotes for sh, escaping any single quotes within
@@ -71,17 +90,17 @@ describe('CLI', () => {
       child.once('close', () => resolve());
     });
 
-    setTimeout(() => {
-      assert(stage.hasBackup());
-      // assert that kill signal was received before process ended normally
-      assert(child.kill());
-    }, 750);
+    assert(await waitForTasks(child));
+    assert(stage.hasBackup());
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
 
     await closed;
 
     const newStatus = stage.git(['status', '-z']);
 
-    assert.equal(child.exitCode, 143);
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
     assert.equal(newStatus, oldStatus);
     assert(!stage.hasBackup());
   });
@@ -105,24 +124,73 @@ describe('CLI', () => {
       child.once('close', () => resolve());
     });
 
-    const timeout = setTimeout(() => {
-      assert(stage.hasBackup());
-      // assert that kill signal was received before process ended normally
-      assert(child.kill());
-    }, 750);
+    assert(await waitForTasks(child));
+    assert(stage.hasBackup());
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
 
     await closed;
 
-    // if the process ended early, don't attempt to kill it
-    clearTimeout(timeout);
-
     const newStatus = stage.git(['status', '-z']);
 
-    assert.equal(child.exitCode, 143);
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
     assert.equal(newStatus, oldStatus);
     assert(!stage.hasBackup());
     // assert that HEAD still does not resolve to a commit
     assert.throws(() => stage.git(['rev-parse', '--verify', '-q', 'HEAD']));
+  });
+
+  it('reverts state on process interrupt during prepare stage', async () => {
+    // pause the prepare stage after the backup is created, so that the interrupt
+    // is received before the prepare stage completes
+    stage.writeFile(
+      '.git/hooks/reference-transaction',
+      [
+        '#!/bin/sh',
+        '[ "$1" = committed ] || exit 0',
+        'while read -r old new ref; do',
+        `  if [ "$ref" = '${BACKUP_WORKING_TREE_REF}' ] && [ "$new" != "\${new#*[!0]}" ]; then`,
+        '    sleep 1',
+        '  fi',
+        'done',
+      ].join('\n'),
+    );
+    stage.chmod('.git/hooks/reference-transaction', 0o755);
+
+    stage.writeFile('test.txt');
+
+    const oldStatus = stage.git(['status', '-z']);
+
+    const child = child_process.spawn('node', [BIN, TASK_SLEEP], {
+      cwd: stage.cwd,
+    });
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+
+    while (!stage.hasBackup() && child.exitCode === null) {
+      await sleep(10);
+    }
+
+    // assert that the prepare stage has started but not completed
+    assert(output.includes(stageLifecycleMessages.prepare));
+    assert(!output.includes(stageLifecycleMessages.run));
+    // assert that kill signal was received before process ended normally
+    assert(child.kill());
+
+    await closed;
+
+    const newStatus = stage.git(['status', '-z']);
+
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, 'SIGTERM');
+    assert.equal(newStatus, oldStatus);
+    assert(!stage.hasBackup());
   });
 
   it('loads config from file', async () => {
@@ -143,6 +211,55 @@ describe('CLI', () => {
     await closed;
 
     assert.equal(child.exitCode, 1);
+  });
+
+  it('reports error and returns exit code 1 if config is invalid', async () => {
+    stage.writeFile('exec-staged.config.ts', `export default [{}];`);
+
+    const child = child_process.spawn('node', [BIN], {
+      cwd: stage.cwd,
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+    child.stderr.on('data', (data) => (output += data));
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 1);
+    assert(output.includes('invalid config'));
+  });
+
+  it('reports error and returns exit code 1 if config throws while loading', async () => {
+    // on Node.js 24 releases before 24.5.0, require() of an ES module whose
+    // import() failed throws ERR_INTERNAL_ASSERTION, which cosmiconfig reports
+    // instead of the original error, causing this test to fail
+    // see https://github.com/nodejs/node/pull/58957
+    stage.writeFile(
+      'exec-staged.config.ts',
+      `throw new Error('config load test error');`,
+    );
+
+    const child = child_process.spawn('node', [BIN], {
+      cwd: stage.cwd,
+    });
+
+    let output = '';
+    child.stdout.on('data', (data) => (output += data));
+    child.stderr.on('data', (data) => (output += data));
+
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve());
+    });
+
+    await closed;
+
+    assert.equal(child.exitCode, 1);
+    assert(output.includes('config load test error'));
   });
 
   it('recovers from failed run', async () => {
