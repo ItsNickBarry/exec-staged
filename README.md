@@ -10,10 +10,10 @@ Run commands against files staged in git, ignoring unstaged changes and untracke
 
 ### How it Works
 
-1. Unstaged changes and untracked files are hidden in a git stash. This includes unstaged deletions, which are temporarily restored.
+1. Unstaged changes and untracked files are hidden in separate git trees. This includes unstaged deletions, which are temporarily restored.
 2. User-configured tasks are run, with staged files passed in according to configuration.
 3. Any changes made by tasks are added to the git index. This includes additions and deletions.
-4. The stashed changes are restored.
+4. The hidden changes are restored.
 5. If any step fails, the initial state is fully restored.
 
 ## Installation
@@ -155,7 +155,7 @@ Defining `diff` or `glob` on a task that does not include the `$FILES` token has
 
 ## Safety Features
 
-Before running any potentially destructive scripts, `exec-staged` stores all outstanding changes, including untracked files, in a backup stash. If any task fails, or if `exec-staged` is interrupted by an end-process signal (such as via <kbd>Ctrl + C</kbd>), the repository's original state is restored using this stash. Avoid running any tasks that interact with git, especially those that make commits or modify the stash.
+Before running any potentially destructive scripts, `exec-staged` stores all outstanding changes, including untracked files, in backup git trees. If any task fails, or if `exec-staged` is interrupted by an end-process signal (such as via <kbd>Ctrl + C</kbd>), the repository's original state is restored from these trees. Avoid running any tasks that interact with git, especially those that make commits.
 
 ### Recovery
 
@@ -165,7 +165,7 @@ If `exec-staged` fails to exit safely, such as due to power loss or if its proce
 npx exec-staged recover
 ```
 
-This will automatically find and apply the backup stash, restore any merge metadata, and clean up leftover artifacts.
+This will automatically find and restore the backup, restore any merge metadata, and clean up leftover artifacts.
 
 To prevent data loss, `exec-staged` will not run if artifacts from a previous run are present.
 
