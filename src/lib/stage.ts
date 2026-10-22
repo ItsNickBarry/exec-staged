@@ -29,6 +29,7 @@ export class Stage {
   private stagedTree?: string;
   private _gitDir?: string;
   private _indexPath?: string;
+  private _tempDir?: string;
   private needsRevert: boolean = false;
 
   private get gitDir(): string {
@@ -37,6 +38,16 @@ export class Stage {
 
   private get artifactsDir(): string {
     return path.resolve(this.gitDir, ARTIFACTS_DIRECTORY);
+  }
+
+  private get tempDir(): string {
+    return (this._tempDir ??= fs.mkdtempSync(
+      path.resolve(envPaths(pkg.name).temp, 'run-'),
+    ));
+  }
+
+  private get patchPath(): string {
+    return path.resolve(this.tempDir, 'patch.diff');
   }
 
   // absolute path of the real index, which holds the staged state; resolved via
@@ -50,7 +61,7 @@ export class Stage {
   }
 
   private get tempIndexPath(): string {
-    return path.resolve(this.artifactsDir, 'index');
+    return path.resolve(this.tempDir, 'index');
   }
 
   // environment for git commands that should use a temporary index instead of
@@ -313,11 +324,6 @@ export class Stage {
     // make sure that the backup exists before running any damaging operations
     const { stagedTree, workingTree } = this.findBackup();
 
-    const patchPath = path.resolve(
-      fs.mkdtempSync(path.resolve(envPaths(pkg.name).temp, 'patch-')),
-      'patch.diff',
-    );
-
     try {
       this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
 
@@ -337,7 +343,7 @@ export class Stage {
         '--submodule=short',
         '--unified=0',
         '--output',
-        patchPath,
+        this.patchPath,
         stagedTree,
         workingTree,
       ]);
@@ -356,14 +362,14 @@ export class Stage {
       // apply patch containing unstaged changes.
       // `--allow-empty` could be used here, but it was not added to `git apply`
       // until 2.35.0 (January 2022), so we skip the call when the patch is empty.
-      if (fs.statSync(patchPath).size > 0) {
+      if (fs.statSync(this.patchPath).size > 0) {
         this.git([
           'apply',
           '--recount',
           '--unidiff-zero',
           '--whitespace=nowarn',
           '--3way',
-          patchPath,
+          this.patchPath,
         ]);
       }
 
@@ -527,9 +533,6 @@ export class Stage {
       return;
     }
 
-    // the temporary index is stored in the artifacts directory
-    fs.mkdirSync(this.artifactsDir, { recursive: true });
-
     if (stagedTree && workingTree) {
       this.logger.log('➡️ Found backup, restoring...');
       this.restoreBackup({ stagedTree, workingTree });
@@ -544,8 +547,7 @@ export class Stage {
 
     if (artifactsFound) {
       this.logger.log('➡️ Found artifacts directory, cleaning up...');
+      fs.rmSync(this.artifactsDir, { recursive: true });
     }
-
-    fs.rmSync(this.artifactsDir, { recursive: true });
   }
 }
