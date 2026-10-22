@@ -10,8 +10,7 @@ export const MERGE_FILES = ['MERGE_HEAD', 'MERGE_MODE', 'MERGE_MSG'] as const;
 
 export const BACKUP_STAGED_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-staged-tree`;
 export const BACKUP_WORKING_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-working-tree`;
-
-export const ARTIFACTS_DIRECTORY = `.${pkg.name}`;
+export const BACKUP_MERGE_STATUS_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-merge-status-tree`;
 
 export const INTERPOLATION_IDENTIFIER = '$FILES';
 

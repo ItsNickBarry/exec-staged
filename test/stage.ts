@@ -1,5 +1,5 @@
 import {
-  ARTIFACTS_DIRECTORY,
+  BACKUP_MERGE_STATUS_TREE_REF,
   BACKUP_STAGED_TREE_REF,
   BACKUP_WORKING_TREE_REF,
   DEFAULT_CONFIG_ENTRY,
@@ -78,12 +78,6 @@ describe('Stage', () => {
       );
     });
 
-    it('throws if artifacts directory from previous run is present', async () => {
-      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
-
-      assert.throws(() => stage.check(), /unexpected artifacts directory/);
-    });
-
     it('throws if backup staged tree ref from previous run is present', async () => {
       stage.git([
         'update-ref',
@@ -98,6 +92,16 @@ describe('Stage', () => {
       stage.git([
         'update-ref',
         BACKUP_WORKING_TREE_REF,
+        stage.git(['write-tree']),
+      ]);
+
+      assert.throws(() => stage.check(), /unexpected backup/);
+    });
+
+    it('throws if backup merge status ref from previous run is present', async () => {
+      stage.git([
+        'update-ref',
+        BACKUP_MERGE_STATUS_TREE_REF,
         stage.git(['write-tree']),
       ]);
 
@@ -415,6 +419,35 @@ describe('Stage', () => {
       assert.equal(newStatus, oldStatus);
       assert.equal(newStatusPorcelain, oldStatusPorcelain);
       assert.equal(newStatusPorcelain, 'M  test.txt');
+    });
+
+    it('hides unstaged changes with in-progress merge', async () => {
+      const theirBranch = 'their-branch';
+
+      stage.git(['checkout', '-b', theirBranch]);
+      stage.writeFile('theirs.txt');
+      stage.git(['add', 'theirs.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['checkout', '-']);
+      stage.writeFile('test.txt', 'old contents');
+      stage.git(['add', 'test.txt']);
+      stage.git(['commit', '-m', 'add file']);
+
+      stage.git(['merge', '--no-commit', theirBranch]);
+
+      stage.writeFile('test.txt', 'new contents');
+      stage.writeFile('untracked.txt');
+
+      assert.equal(
+        stage.git(['status', '--porcelain']),
+        ' M test.txt\nA  theirs.txt\n?? untracked.txt',
+      );
+
+      stage.prepare();
+
+      assert.equal(stage.git(['status', '--porcelain']), 'A  theirs.txt');
+      assert.equal(stage.readFile('test.txt'), 'old contents');
     });
 
     it('reverts if hiding unstaged changes fails', async () => {
@@ -1225,7 +1258,7 @@ describe('Stage', () => {
   });
 
   describe('::recover', () => {
-    it('does nothing if no artifacts are present', async () => {
+    it('does nothing if no backup is present', async () => {
       stage.writeFile('staged.txt', 'staged');
       stage.git(['add', 'staged.txt']);
       stage.writeFile('tracked.txt', 'original');
@@ -1257,16 +1290,7 @@ describe('Stage', () => {
       assert.equal(stage.readFile('test.txt'), 'unstaged contents');
     });
 
-    it('removes artifacts directory', async () => {
-      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
-      stage.writeFile(`.git/${ARTIFACTS_DIRECTORY}/patch.diff`);
-
-      stage.recover();
-
-      assert.doesNotThrow(() => stage.check());
-    });
-
-    it('restores merge status files from artifacts directory', async () => {
+    it('restores merge status from backup', async () => {
       const theirBranch = 'their-branch';
 
       stage.git(['checkout', '-b', theirBranch]);
@@ -1288,8 +1312,8 @@ describe('Stage', () => {
 
       stage.prepare();
 
-      // simulate a task's removing merge status, leaving the copies in the
-      // artifacts directory as the only record of it
+      // simulate a task's removing merge status, leaving the backup ref as the
+      // only record of it
       stage.git(['merge', '--quit']);
       assert.notEqual(stage.git(['status']), oldStatus);
 
