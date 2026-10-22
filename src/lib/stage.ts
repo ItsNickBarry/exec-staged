@@ -1,6 +1,7 @@
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   ARTIFACTS_DIRECTORY,
+  BACKUP_MERGE_STATUS_TREE_REF,
   BACKUP_STAGED_TREE_REF,
   BACKUP_WORKING_TREE_REF,
   INTERPOLATION_IDENTIFIER,
@@ -23,7 +24,6 @@ export class Stage {
   protected readonly cwd: string;
   protected backedUp: boolean = false;
   private readonly status: { [file: string]: string } = {};
-  private readonly mergeStatus: (typeof MERGE_FILES)[number][] = [];
   private stagedTree?: string;
   private _gitDir?: string;
   private _indexPath?: string;
@@ -184,7 +184,8 @@ export class Stage {
 
     if (
       this.resolveRef(BACKUP_STAGED_TREE_REF) ||
-      this.resolveRef(BACKUP_WORKING_TREE_REF)
+      this.resolveRef(BACKUP_WORKING_TREE_REF) ||
+      this.resolveRef(BACKUP_MERGE_STATUS_TREE_REF)
     ) {
       this.logger.log('⚠️ Found unexpected backup!');
       this.logger.log(
@@ -212,14 +213,6 @@ export class Stage {
     fs.mkdirSync(this.artifactsDir);
 
     try {
-      this.logger.debug('➡️ ➡️ Backing up merge status...');
-      this.backupMergeStatus();
-    } catch (error) {
-      this.logger.log('⚠️ Error backing up merge status!');
-      throw error;
-    }
-
-    try {
       this.logger.debug('➡️ ➡️ Creating backup and hiding unstaged changes...');
 
       // record the working tree, including untracked files
@@ -238,6 +231,10 @@ export class Stage {
         ['read-tree', '-u', '--reset', this.stagedTree],
         this.tempIndexEnv,
       );
+
+      // must run after the reset, which depends on the temporary index
+      this.logger.debug('➡️ ➡️ Backing up merge status...');
+      this.backupMergeStatus();
     } catch (error) {
       this.logger.log('⚠️ Error creating backup!');
       this.logger.debug(error);
@@ -380,8 +377,8 @@ export class Stage {
       this.git(['read-tree', '--reset', newStagedTree]);
 
       // clean up
-      this.deleteBackup();
       this.restoreMergeStatus();
+      this.deleteBackup();
       fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes!');
@@ -420,8 +417,8 @@ export class Stage {
     try {
       this.logger.debug('➡️ ➡️ Cleaning up backup...');
 
-      this.deleteBackup();
       this.restoreMergeStatus();
+      this.deleteBackup();
       fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
       this.logger.log('⚠️ Failed to clean up backup!');
@@ -441,23 +438,42 @@ export class Stage {
     return stdout;
   }
 
+  // store merge status files as blobs in a tree referenced by a backup ref,
+  // built in the temporary index because the files are inside the git
+  // directory and cannot be added from the working tree
   private backupMergeStatus() {
-    for (const mergeFile of MERGE_FILES) {
-      const src = path.resolve(this.gitDir, mergeFile);
-      if (fs.existsSync(src)) {
-        fs.copyFileSync(src, path.resolve(this.artifactsDir, mergeFile));
-        this.mergeStatus.push(mergeFile);
-      }
-    }
+    const cacheInfo = MERGE_FILES.filter((mergeFile) =>
+      fs.existsSync(path.resolve(this.gitDir, mergeFile)),
+    ).flatMap((mergeFile) => {
+      const blob = this.git([
+        'hash-object',
+        '-w',
+        '--no-filters',
+        path.resolve(this.gitDir, mergeFile),
+      ]);
+      return ['--cacheinfo', `100644,${blob},${mergeFile}`];
+    });
+
+    if (cacheInfo.length === 0) return;
+
+    this.git(['read-tree', '--empty'], this.tempIndexEnv);
+    this.git(['update-index', '--add', ...cacheInfo], this.tempIndexEnv);
+    const mergeStatusTree = this.git(['write-tree'], this.tempIndexEnv);
+    this.git(['update-ref', BACKUP_MERGE_STATUS_TREE_REF, mergeStatusTree]);
   }
 
+  // write merge status files from the backup tree into the git directory;
+  // uses the temporary index, so must not run while it holds needed state
   private restoreMergeStatus() {
-    for (const mergeFile of this.mergeStatus) {
-      fs.renameSync(
-        path.resolve(this.artifactsDir, mergeFile),
-        path.resolve(this.gitDir, mergeFile),
-      );
-    }
+    const mergeStatusTree = this.resolveRef(BACKUP_MERGE_STATUS_TREE_REF);
+
+    if (!mergeStatusTree) return;
+
+    this.git(['read-tree', mergeStatusTree], this.tempIndexEnv);
+    this.git(
+      ['checkout-index', '-a', '-f', `--prefix=${this.gitDir}${path.sep}`],
+      this.tempIndexEnv,
+    );
   }
 
   private resolveRef(ref: string): string | undefined {
@@ -487,7 +503,11 @@ export class Stage {
   }
 
   private deleteBackup() {
-    for (const ref of [BACKUP_WORKING_TREE_REF, BACKUP_STAGED_TREE_REF]) {
+    for (const ref of [
+      BACKUP_MERGE_STATUS_TREE_REF,
+      BACKUP_WORKING_TREE_REF,
+      BACKUP_STAGED_TREE_REF,
+    ]) {
       // succeeds even if the ref does not exist
       this.git(['update-ref', '-d', ref]);
     }
@@ -496,36 +516,33 @@ export class Stage {
   public recover() {
     const stagedTree = this.resolveRef(BACKUP_STAGED_TREE_REF);
     const workingTree = this.resolveRef(BACKUP_WORKING_TREE_REF);
+    const mergeStatusTree = this.resolveRef(BACKUP_MERGE_STATUS_TREE_REF);
     const artifactsFound = fs.existsSync(this.artifactsDir);
 
-    if (!stagedTree && !workingTree && !artifactsFound) {
+    if (!stagedTree && !workingTree && !mergeStatusTree && !artifactsFound) {
       this.logger.log('➡️ Nothing to recover.');
       return;
     }
 
+    // the temporary index is stored in the artifacts directory
+    fs.mkdirSync(this.artifactsDir, { recursive: true });
+
     if (stagedTree && workingTree) {
       this.logger.log('➡️ Found backup, restoring...');
-
-      // the temporary index is stored in the artifacts directory
-      fs.mkdirSync(this.artifactsDir, { recursive: true });
       this.restoreBackup({ stagedTree, workingTree });
+    }
+
+    if (mergeStatusTree) {
+      this.logger.log('➡️ Found merge status backup, restoring...');
+      this.restoreMergeStatus();
     }
 
     this.deleteBackup();
 
-    if (fs.existsSync(this.artifactsDir)) {
-      if (artifactsFound) {
-        this.logger.log('➡️ Found artifacts directory, cleaning up...');
-      }
-
-      for (const mergeFile of MERGE_FILES) {
-        const src = path.resolve(this.artifactsDir, mergeFile);
-        if (fs.existsSync(src)) {
-          fs.renameSync(src, path.resolve(this.gitDir, mergeFile));
-        }
-      }
-
-      fs.rmSync(this.artifactsDir, { recursive: true });
+    if (artifactsFound) {
+      this.logger.log('➡️ Found artifacts directory, cleaning up...');
     }
+
+    fs.rmSync(this.artifactsDir, { recursive: true });
   }
 }

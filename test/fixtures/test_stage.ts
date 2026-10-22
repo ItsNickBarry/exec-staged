@@ -1,5 +1,6 @@
 import pkg from '../../package.json';
 import {
+  BACKUP_MERGE_STATUS_TREE_REF,
   BACKUP_STAGED_TREE_REF,
   BACKUP_WORKING_TREE_REF,
 } from '../../src/lib/constants.js';
@@ -77,6 +78,7 @@ export class TestStage extends Stage {
       'for-each-ref',
       BACKUP_STAGED_TREE_REF,
       BACKUP_WORKING_TREE_REF,
+      BACKUP_MERGE_STATUS_TREE_REF,
     ]);
   }
 
