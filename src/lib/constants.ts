@@ -12,8 +12,6 @@ export const BACKUP_STAGED_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-st
 export const BACKUP_WORKING_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-working-tree`;
 export const BACKUP_MERGE_STATUS_TREE_REF = `refs/${pkg.name}/${pkg.version}/backup-merge-status-tree`;
 
-export const ARTIFACTS_DIRECTORY = `.${pkg.name}`;
-
 export const INTERPOLATION_IDENTIFIER = '$FILES';
 
 const PREFIX = '➡️ ';

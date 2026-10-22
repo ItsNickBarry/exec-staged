@@ -1,5 +1,4 @@
 import {
-  ARTIFACTS_DIRECTORY,
   BACKUP_MERGE_STATUS_TREE_REF,
   BACKUP_STAGED_TREE_REF,
   BACKUP_WORKING_TREE_REF,
@@ -77,12 +76,6 @@ describe('Stage', () => {
         () => stage.check(),
         /cwd is not a git repository root directory/,
       );
-    });
-
-    it('throws if artifacts directory from previous run is present', async () => {
-      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
-
-      assert.throws(() => stage.check(), /unexpected artifacts directory/);
     });
 
     it('throws if backup staged tree ref from previous run is present', async () => {
@@ -1265,7 +1258,7 @@ describe('Stage', () => {
   });
 
   describe('::recover', () => {
-    it('does nothing if no artifacts are present', async () => {
+    it('does nothing if no backup is present', async () => {
       stage.writeFile('staged.txt', 'staged');
       stage.git(['add', 'staged.txt']);
       stage.writeFile('tracked.txt', 'original');
@@ -1295,15 +1288,6 @@ describe('Stage', () => {
       const newStatus = stage.git(['status', '-z']);
       assert.equal(newStatus, oldStatus);
       assert.equal(stage.readFile('test.txt'), 'unstaged contents');
-    });
-
-    it('removes artifacts directory', async () => {
-      stage.mkdir(`.git/${ARTIFACTS_DIRECTORY}`);
-      stage.writeFile(`.git/${ARTIFACTS_DIRECTORY}/patch.diff`);
-
-      stage.recover();
-
-      assert.doesNotThrow(() => stage.check());
     });
 
     it('restores merge status from backup', async () => {

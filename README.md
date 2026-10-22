@@ -165,9 +165,9 @@ If `exec-staged` fails to exit safely, such as due to power loss or if its proce
 npx exec-staged recover
 ```
 
-This will automatically find and restore the backup, restore any merge metadata, and clean up leftover artifacts.
+This will automatically find and restore the backup, including any merge metadata, and then delete it.
 
-To prevent data loss, `exec-staged` will not run if artifacts from a previous run are present.
+To prevent data loss, `exec-staged` will not run if a backup from a previous run is present.
 
 ## See Also
 

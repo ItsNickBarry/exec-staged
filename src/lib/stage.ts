@@ -1,7 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
-  ARTIFACTS_DIRECTORY,
   BACKUP_MERGE_STATUS_TREE_REF,
   BACKUP_STAGED_TREE_REF,
   BACKUP_WORKING_TREE_REF,
@@ -34,10 +33,6 @@ export class Stage {
 
   private get gitDir(): string {
     return (this._gitDir ??= this.git(['rev-parse', '--absolute-git-dir']));
-  }
-
-  private get artifactsDir(): string {
-    return path.resolve(this.gitDir, ARTIFACTS_DIRECTORY);
   }
 
   private get tempDir(): string {
@@ -183,14 +178,6 @@ export class Stage {
       }
     }
 
-    if (fs.existsSync(this.artifactsDir)) {
-      this.logger.log('⚠️ Found unexpected artifacts directory!');
-      this.logger.log(
-        'It must be left over from a previous failed run.  Run `exec-staged recover` to restore your repository.',
-      );
-      throw new Error('unexpected artifacts directory');
-    }
-
     if (
       this.resolveRef(BACKUP_STAGED_TREE_REF) ||
       this.resolveRef(BACKUP_WORKING_TREE_REF) ||
@@ -218,8 +205,6 @@ export class Stage {
 
     // if there are no files in index or working tree, do not create a backup
     if (Object.keys(this.status).length === 0) return;
-
-    fs.mkdirSync(this.artifactsDir);
 
     try {
       this.logger.debug('➡️ ➡️ Creating backup and hiding unstaged changes...');
@@ -388,7 +373,6 @@ export class Stage {
       // clean up
       this.restoreMergeStatus();
       this.deleteBackup();
-      fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
       this.logger.log('⚠️ Error restoring unstaged changes!');
       throw error;
@@ -428,7 +412,6 @@ export class Stage {
 
       this.restoreMergeStatus();
       this.deleteBackup();
-      fs.rmSync(this.artifactsDir, { recursive: true });
     } catch (error) {
       this.logger.log('⚠️ Failed to clean up backup!');
       throw error;
@@ -526,9 +509,8 @@ export class Stage {
     const stagedTree = this.resolveRef(BACKUP_STAGED_TREE_REF);
     const workingTree = this.resolveRef(BACKUP_WORKING_TREE_REF);
     const mergeStatusTree = this.resolveRef(BACKUP_MERGE_STATUS_TREE_REF);
-    const artifactsFound = fs.existsSync(this.artifactsDir);
 
-    if (!stagedTree && !workingTree && !mergeStatusTree && !artifactsFound) {
+    if (!stagedTree && !workingTree && !mergeStatusTree) {
       this.logger.log('➡️ Nothing to recover.');
       return;
     }
@@ -544,10 +526,5 @@ export class Stage {
     }
 
     this.deleteBackup();
-
-    if (artifactsFound) {
-      this.logger.log('➡️ Found artifacts directory, cleaning up...');
-      fs.rmSync(this.artifactsDir, { recursive: true });
-    }
   }
 }
