@@ -26,6 +26,6 @@ export class Logger {
   }
 
   public debug(...params: Parameters<typeof console.debug>): void {
-    fs.appendFileSync(this.outFile, params.join('\n') + '\n');
+    fs.appendFileSync(this.outFile, params.join('\n') + '\n', { mode: 0o600 });
   }
 }
