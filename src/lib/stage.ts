@@ -1,3 +1,4 @@
+import pkg from '../../package.json' with { type: 'json' };
 import type { ExecStagedConfig, StageOptions } from '../types.js';
 import {
   ARTIFACTS_DIRECTORY,
@@ -10,6 +11,7 @@ import {
 } from './constants.js';
 import { Logger } from './logger.js';
 import { spawn, spawnSync } from './spawn.js';
+import envPaths from 'env-paths';
 import micromatch from 'micromatch';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -35,10 +37,6 @@ export class Stage {
 
   private get artifactsDir(): string {
     return path.resolve(this.gitDir, ARTIFACTS_DIRECTORY);
-  }
-
-  private get patchPath(): string {
-    return path.resolve(this.artifactsDir, 'patch.diff');
   }
 
   // absolute path of the real index, which holds the staged state; resolved via
@@ -315,6 +313,11 @@ export class Stage {
     // make sure that the backup exists before running any damaging operations
     const { stagedTree, workingTree } = this.findBackup();
 
+    const patchPath = path.resolve(
+      fs.mkdtempSync(path.resolve(envPaths(pkg.name).temp, 'patch-')),
+      'patch.diff',
+    );
+
     try {
       this.logger.debug('➡️ ➡️ Creating patch of unstaged changes...');
 
@@ -334,7 +337,7 @@ export class Stage {
         '--submodule=short',
         '--unified=0',
         '--output',
-        this.patchPath,
+        patchPath,
         stagedTree,
         workingTree,
       ]);
@@ -353,14 +356,14 @@ export class Stage {
       // apply patch containing unstaged changes.
       // `--allow-empty` could be used here, but it was not added to `git apply`
       // until 2.35.0 (January 2022), so we skip the call when the patch is empty.
-      if (fs.statSync(this.patchPath).size > 0) {
+      if (fs.statSync(patchPath).size > 0) {
         this.git([
           'apply',
           '--recount',
           '--unidiff-zero',
           '--whitespace=nowarn',
           '--3way',
-          this.patchPath,
+          patchPath,
         ]);
       }
 
